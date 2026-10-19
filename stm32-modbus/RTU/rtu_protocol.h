@@ -1,0 +1,204 @@
+#ifndef __RTU_PROTOCOL_H_
+#define __RTU_PROTOCOL_H_
+
+//#define RTU_PROTORCAL_VERSION		2
+
+//#define RTU_MEM(x) (x-RTU_MEM_BASE)
+
+//#if (RTU_PROTORCAL_VERSION == 1)
+//enum RTU_MOTOR_ADDR
+//{
+//	ADDR_MOTOR_GET_CTRLMODE = 0,
+//	ADDR_MOTOR_GET_FRQ,
+//	ADDR_MOTOR_GET_OVOL,
+//	ADDR_MOTOR_GET_BUSCUR,
+//	ADDR_MOTOR_GET_BUSVOL,
+//	ADDR_MOTOR_GET_STATE,
+//	ADDR_MOTOR_GET_TORQUE,
+//	ADDR_MOTOR_GET_HSTEMP,
+//	ADDR_MOTOR_GET_MOTORTEMP,
+//	ADDR_MOTOR_GET_AIRTEMP,
+//	ADDR_MOTOR_GET_POWER,
+//	ADDR_MOTOR_GET_ID,
+//	ADDR_MOTOR_GET_IQ,
+//	ADDR_MOTOR_GET_VD,
+//	ADDR_MOTOR_GET_VQ,
+//	ADDR_MOTOR_GET_UCUR,
+//	ADDR_MOTOR_GET_VCUR,
+//	ADDR_MOTOR_GET_WCUR,
+//	ADDR_MOTOR_GET_RPM,
+//	ADDR_MOTOR_GET_SETRPM,
+//	ADDR_MOTOR_GET_ANGLE,
+//	ADDR_MOTOR_GET_BRK_RES_VOL,
+//	ADDR_MOTOR_GET_BRK_RES_PWM,
+//	ADDR_MOTOR_GET_BRK_RES_DUTY,
+//	ADDR_MOTOR_GET_ACC1,
+//	ADDR_MOTOR_GET_ACC2,
+//	ADDR_MOTOR_GET_ACC3,
+//	ADDR_MOTOR_GET_ACC4,
+//	ADDR_MOTOR_GET_ACC5,
+//	ADDR_MOTOR_GET_ACC6,
+//	ADDR_MOTOR_GET_ACC7,
+//	ADDR_MOTOR_GET_ACC8,
+//	ADDR_MOTOR_GET_ACC9,
+//	ADDR_MOTOR_GET_ACC10,
+//	ADDR_MOTOR_GET_DEC1,
+//	ADDR_MOTOR_GET_DEC2,
+//	ADDR_MOTOR_GET_DEC3,
+//	ADDR_MOTOR_GET_DEC4,
+//	ADDR_MOTOR_GET_DEC5,
+//	ADDR_MOTOR_GET_DEC6,
+//	ADDR_MOTOR_GET_DEC7,
+//	ADDR_MOTOR_GET_DEC8,
+//	ADDR_MOTOR_GET_DEC9,
+//	ADDR_MOTOR_GET_DEC10,
+//	ADDR_MOTOR_GET_RESERVE1,
+//	ADDR_MOTOR_GET_RESERVE2,
+//	ADDR_MOTOR_GET_RESERVE3,
+//	ADDR_MOTOR_GET_STARTUPDELAY,
+//	ADDR_MOTOR_GET_ROTORID,
+//	ADDR_MOTOR_GET_MEMSX,
+//	ADDR_MOTOR_GET_MEMSY,
+//	ADDR_MOTOR_GET_MEMSZ,
+//	ADDR_MOTOR_GET_CASE,
+//	ADDR_MOTOR_GET_DOORLOCK,
+//	ADDR_MOTOR_GET_ROLLER,
+//	ADDR_MOTOR_TOTAL,
+//	ADDR_MOTOR_BASE= 0x1000,
+//	ADDR_MOTOR_SET_RUN = 0x2000,
+//	ADDR_MOTOR_SET_RPM = 0x2002,
+//	ADDR_MOTOR_SET_FRQ = 0x2008,
+//	ADDR_MOTOR_SET_VOL = 0x200A,
+//	ADDR_MOTOR_SET_DOOR = 0x2012,
+//};
+//#elif (RTU_PROTORCAL_VERSION == 2)
+//enum RTU_MOTOR_ADDR
+//{
+///////////////motor work parameters////////
+//	ADDR_MOTOR_GET_CTRLMODE = 0,
+//	ADDR_MOTOR_GET_FRQ,
+//	ADDR_MOTOR_GET_OVOL,
+//	ADDR_MOTOR_GET_BUSCUR,
+//	ADDR_MOTOR_GET_BUSVOL,
+//	ADDR_MOTOR_GET_FAULT,
+//	ADDR_MOTOR_GET_TORQUE,
+//	ADDR_MOTOR_GET_IPMTEMP,
+//	ADDR_MOTOR_GET_HSTEMP,
+//	ADDR_MOTOR_GET_POWER,
+//	ADDR_MOTOR_GET_ID,
+//	ADDR_MOTOR_GET_IQ,
+//	ADDR_MOTOR_GET_VD,
+//	ADDR_MOTOR_GET_VQ,
+//	ADDR_MOTOR_GET_UCUR,
+//	ADDR_MOTOR_GET_VCUR,
+//	ADDR_MOTOR_GET_WCUR,
+//	ADDR_MOTOR_GET_RPM,
+//	ADDR_MOTOR_GET_ANGLE,
+//	ADDR_MOTOR_GET_BRK_RES_VOL,
+//	ADDR_MOTOR_GET_BRK_RES_PWM,
+//	ADDR_MOTOR_GET_BRK_RES_DUTY,
+//	ADDR_MOTOR_GET_ACC1,
+//	ADDR_MOTOR_GET_ACC2,
+//	ADDR_MOTOR_GET_ACC3,
+//	ADDR_MOTOR_GET_ACC4,
+//	ADDR_MOTOR_GET_ACC5,
+//	ADDR_MOTOR_GET_ACC6,
+//	ADDR_MOTOR_GET_ACC7,
+//	ADDR_MOTOR_GET_ACC8,
+//	ADDR_MOTOR_GET_ACC9,
+//	ADDR_MOTOR_GET_ACC10,
+//	ADDR_MOTOR_GET_DEC1,
+//	ADDR_MOTOR_GET_DEC2,
+//	ADDR_MOTOR_GET_DEC3,
+//	ADDR_MOTOR_GET_DEC4,
+//	ADDR_MOTOR_GET_DEC5,
+//	ADDR_MOTOR_GET_DEC6,
+//	ADDR_MOTOR_GET_DEC7,
+//	ADDR_MOTOR_GET_DEC8,
+//	ADDR_MOTOR_GET_DEC9,
+//	ADDR_MOTOR_GET_DEC10,
+/////////////////////////////////////////
+////////////////motor control paras
+//	ADDR_MOTOR_SET_RUN,
+//	ADDR_MOTOR_SET_CTRLMODE,
+//	ADDR_MOTOR_SET_RPM,
+//	ADDR_MOTOR_SET_FRQ,
+//	ADDR_MOTOR_SET_VOL,
+//	ADDR_MOTOR_SET_OC,
+//	ADDR_MOTOR_SET_OT,
+//	ADDR_MOTOR_SET_OL,
+//	ADDR_MOTOR_SET_OLTIME,
+//	ADDR_MOTOR_SET_OV,
+//	ADDR_MOTOR_SET_LV,
+/////////////////////////////////////////	
+//	ADDR_RESERVE1,
+//	
+//	ADDR_RUN_STATE,
+//	ADDR_STARTUPDELAY,
+//	ADDR_GET_MOTORTEMP,
+//	ADDR_GET_AIRTEMP,
+//	ADDR_GET_ROTORID,
+//	ADDR_GET_MEMSX,
+//	ADDR_GET_MEMSY,
+//	ADDR_GET_MEMSZ,
+//	ADDR_GET_CASE,
+//	ADDR_GET_DOORLOCK,
+//	ADDR_GET_ROLLER,
+
+//	ADDR_SET_DOOR,
+//	ADDR_SET_ROLLER,
+//	ADDR_SET_ACFAN,
+//	ADDR_SET_DCFAN,	
+//	ADDR_SET_LED,	
+//	ADDR_HREG_TOTAL,
+//	RTU_MEM_BASE= 0x1000,
+//};
+//#endif
+//typedef struct
+//{
+//	unsigned short* dat;
+//}RTU_MemDef;
+
+
+
+#define MAX_BUFFER_NUMBER 8
+typedef struct 
+{
+	unsigned char rxdata_buffer[MAX_BUFFER_NUMBER][256];
+	unsigned char pending_data;
+	unsigned char processed_data;
+	unsigned char event;
+	unsigned char repeat;
+	unsigned short cmd[MAX_BUFFER_NUMBER];
+	unsigned short cmd_data[MAX_BUFFER_NUMBER];
+	unsigned char pending;
+	unsigned char processed;
+	unsigned char sta;
+	unsigned char funcode;
+	unsigned short addr;
+}RTU_TypeDef;
+
+typedef enum
+{
+    C_EV_READY            = 1<<0,         /*!< Startup finished. */
+    C_EV_FRAME_RECEIVED   = 1<<1,         /*!< Frame received. */
+    C_EV_EXECUTE          = 1<<2,         /*!< Execute function. */
+    C_EV_FRAME_SENT       = 1<<3,          /*!< Frame sent. */
+    C_EV_TIME_OUT      	  = 1<<4,          /*!< receive timer out. */
+	C_EV_REPEAT			  = 1<<5,
+} RTU_EventType;
+
+
+//extern RTU_MemDef usRegHoldingBuf[ADDR_HREG_TOTAL];
+extern RTU_TypeDef  rtu_structure;//main and module
+
+
+void rtu_protocol_format_rd(unsigned short addr,unsigned short length);
+
+void rtu_protocol_format_wr(unsigned short addr,unsigned short length,unsigned short* senddata);
+
+void rtu_data_init(void);
+
+unsigned char  rtu_response_handler(void);
+
+#endif 
