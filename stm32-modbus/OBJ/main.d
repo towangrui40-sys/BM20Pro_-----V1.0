@@ -49,6 +49,5 @@
 ..\obj\main.o: ..\modbus_m\include\mb_m.h
 ..\obj\main.o: ..\port\port.h
 ..\obj\main.o: ..\modbus_m\port\user_mb_app.h
-..\obj\main.o: ..\COMMON\Stepper_Motor_ComReg.h
 ..\obj\main.o: ..\modbus\include\mbframe.h
 ..\obj\main.o: ..\modbus\include\mbutils.h

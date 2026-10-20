@@ -1,6 +1,5 @@
 ..\obj\user_mb_app_m.o: ..\modbus_m\port\user_mb_app_m.c
 ..\obj\user_mb_app_m.o: ..\modbus_m\port\user_mb_app.h
-..\obj\user_mb_app_m.o: ..\COMMON\Stepper_Motor_ComReg.h
 ..\obj\user_mb_app_m.o: ..\modbus_m\include\mb_m.h
 ..\obj\user_mb_app_m.o: ..\modbus\include\mbconfig.h
 ..\obj\user_mb_app_m.o: ..\modbus\include\mbport.h

@@ -1,9 +1,9 @@
 /*
 ************************************************************************************************
-Ö÷ÒªµÄ°üº¬ÎÄ¼ş
+ï¿½ï¿½Òªï¿½Ä°ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
 
-ÎÄ ¼ş: INCLUDES.C ucos°üº¬ÎÄ¼ş
-×÷ Õß: Jean J. Labrosse
+ï¿½ï¿½ ï¿½ï¿½: INCLUDES.C ucosï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
+ï¿½ï¿½ ï¿½ï¿½: Jean J. Labrosse
 ************************************************************************************************
 */
 
@@ -85,18 +85,17 @@ typedef struct
 	short read_speed;		
 	short motor_state;	
 	short motor_current;	
-	short run_state;
 	short set_led;
 	short set_ac1;
 	short set_ac2;
 	short set_ac3;
-	short set_case;
+	short set_case;       //1:Open case 2:close case
 	short set_lock;
-	short case_state;     //¸Ç×Ó×´Ì¬
-	short lock_state;     //ÑĞÄ¥¹ŞËø×´Ì¬ 
-	short location_test;  //ÑĞÄ¥¹ŞÎ»ÖÃ¼ì²â
-	short tank_lock;      //¼ì²â°ÑÊÖ×´Ì¬´«¸ĞÆ÷
-}CTRL_TypeDef;	
+	short case_state;     //0:å…³åˆ°ä½ 1:å¼€åˆ°ä½ 2:ä¸­é—´ä½ç½®
+	short lock_state;
+	short location_test;  //0:åœ¨ä¸­é—´ 1:åœ¨1å·ä½ 2:åœ¨2å·ä½
+	short tank_lock;
+}CTRL_TypeDef;
 
 	
 

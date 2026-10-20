@@ -49,6 +49,5 @@
 ..\obj\door_ctrl.o: ..\modbus_m\include\mb_m.h
 ..\obj\door_ctrl.o: ..\port\port.h
 ..\obj\door_ctrl.o: ..\modbus_m\port\user_mb_app.h
-..\obj\door_ctrl.o: ..\COMMON\Stepper_Motor_ComReg.h
 ..\obj\door_ctrl.o: ..\modbus\include\mbframe.h
 ..\obj\door_ctrl.o: ..\modbus\include\mbutils.h

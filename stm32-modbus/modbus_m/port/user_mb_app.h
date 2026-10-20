@@ -1,7 +1,6 @@
 #ifndef    USER_APP
 #define USER_APP
 /* ----------------------- Modbus includes ----------------------------------*/
-#include "Stepper_Motor_ComReg.h"
 //#include "mb.h"
 #include "mb_m.h"
 #include "mbconfig.h"
@@ -36,7 +35,8 @@
 #define M_REG_INPUT_START             0
 #define M_REG_INPUT_NREGS             14
 #define M_REG_HOLDING_START           0
-#define M_REG_HOLDING_NREGS           10
+/* 主站保持寄存器缓冲区大小，必须能覆盖步进驱动器的 0x0029 归零寄存器 */
+#define M_REG_HOLDING_NREGS           64
 /* master mode: holding register's all address */
 #define          M_HD_RESERVE                     0
 /* master mode: input register's all address */
