@@ -85,16 +85,16 @@ typedef struct
 	short read_speed;		
 	short motor_state;	
 	short motor_current;	
-	short set_led;
+	short set_led;        //1:红灯闪烁 2:绿灯闪烁
 	short set_ac1;
 	short set_ac2;
 	short set_ac3;
 	short set_case;       //1:Open case 2:close case
 	short set_lock;
 	short case_state;     //0:关到位 1:开到位 2:中间位置
-	short lock_state;
+	short lock_state;     //0:解锁位 1:上锁位 2:运行位
 	short location_test;  //0:在中间 1:在1号位 2:在2号位
-	short tank_lock;
+	short tank_lock;      //0:下压到位 1:不在位置
 }CTRL_TypeDef;
 
 	
