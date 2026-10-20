@@ -28,10 +28,9 @@ void Init_Rtu_RegHoldingBuf(SysDataDef* dat,short *buf)
 }
 			   
 #define START_TASK_PRIO      					14
-#define LED_TASK_PRIO       					13
 #define DC_LED_TASK_PRIO						12
 #define MONITOR_TASK_PRIO						11
-#define CONTROL_TASK_PRIO						10
+#define SENSOR_TASK_PRIO						9
 
 /* 罐锁任务优先级：低于 hmi/com 任务，阻塞等待 Modbus 应答时让主站任务运行 */
 #define TANK_LOCK_TASK_PRIO					7	
@@ -41,9 +40,8 @@ void Init_Rtu_RegHoldingBuf(SysDataDef* dat,short *buf)
 
 
 #define START_STK_SIZE  				256
-#define LED_STK_SIZE  		    		64
 #define MONITOR_STK_SIZE				1024
-#define CONTROL_STK_SIZE				256
+#define SENSOR_STK_SIZE					256
 #define DC_LED_STK_SIZE  		    	64
 /* 罐锁任务栈：Lock_Process 内部会调用 FreeModbus，栈比原来的 256 加大到 512 */
 #define TANK_LOCK_STK_SIZE			512
@@ -52,18 +50,16 @@ void Init_Rtu_RegHoldingBuf(SysDataDef* dat,short *buf)
 
 
 OS_STK START_TASK_STK[START_STK_SIZE];
-OS_STK LED_TASK_STK[LED_STK_SIZE];
 OS_STK MONITOR_TASK_STK[MONITOR_STK_SIZE];
-OS_STK CONTROL_TASK_STK[CONTROL_STK_SIZE];
+OS_STK SENSOR_TASK_STK[SENSOR_STK_SIZE];
 OS_STK DC_LED_TASK_STK[DC_LED_STK_SIZE];
 OS_STK TANK_LOCK_TASK_STK[TANK_LOCK_STK_SIZE];
 OS_STK HMI_INTERFACE_TASK_STK[HMI_INTERFACE_STK_SIZE];
 OS_STK COM_INTERFACE_TASK_STK[COM_INTERFACE_STK_SIZE];
 
 void start_task(void *pdata);
-void led_task(void *pdata);	
 void monitor_task(void *pdata);
-void control_task(void *pdata);
+void sensor_task(void *pdata);
 void dc_led_task(void *pdata);	
 void tank_lock_task(void *pdata);
 void hmi_interface_task(void *pdata);
@@ -96,8 +92,7 @@ void start_task(void *pdata)
  	OSTaskCreate(com_interface_task,(void *)0,(OS_STK*)&COM_INTERFACE_TASK_STK[COM_INTERFACE_STK_SIZE-1],COM_INTERFACE_TASK_PRIO);
 	OSTaskCreate(tank_lock_task,(void *)0,(OS_STK*)&TANK_LOCK_TASK_STK[TANK_LOCK_STK_SIZE-1],TANK_LOCK_TASK_PRIO);	
 	OSTaskCreate(monitor_task,(void *)0,(OS_STK*)&MONITOR_TASK_STK[MONITOR_STK_SIZE-1],MONITOR_TASK_PRIO);
-	OSTaskCreate(control_task,(void *)0,(OS_STK*)&CONTROL_TASK_STK[CONTROL_STK_SIZE-1],CONTROL_TASK_PRIO);
-	OSTaskCreate(led_task,(void *)0,(OS_STK*)&LED_TASK_STK[LED_STK_SIZE-1],LED_TASK_PRIO);
+	OSTaskCreate(sensor_task,(void *)0,(OS_STK*)&SENSOR_TASK_STK[SENSOR_STK_SIZE-1],SENSOR_TASK_PRIO);
 	OSTaskCreate(dc_led_task,(void *)0,(OS_STK*)&DC_LED_TASK_STK[DC_LED_STK_SIZE-1],DC_LED_TASK_PRIO);
 	OSTaskSuspend(START_TASK_PRIO);
 	OS_EXIT_CRITICAL();
@@ -162,6 +157,8 @@ void tank_lock_task(void *pdata)
 #define LED_BLINK_COUNT         6u      /* 闪烁次数 */
 #define LED_HALF_PERIOD_MS      200u    /* 亮 200ms、灭 200ms */
 #define LED_HALF_PERIOD_TICKS   ((uint32_t)LED_HALF_PERIOD_MS * OS_TICKS_PER_SEC / 1000u)
+#define LED_RUN_HALF_PERIOD_MS  500u    /* 运行灯亮 500ms、灭 500ms */
+#define LED_RUN_HALF_PERIOD_TICKS ((uint32_t)LED_RUN_HALF_PERIOD_MS * OS_TICKS_PER_SEC / 1000u)
 #define LED_TASK_POLL_MS        10u     /* 任务轮询周期 */
 
 typedef struct
@@ -258,6 +255,9 @@ static void Led_Update(LedPatternDef *p)
 
 /*
  * LED/蜂鸣器任务
+ *   - LED_RUN 每 500ms 翻转一次，作为运行指示灯
+ *   - set_led 控制红/绿提示灯和蜂鸣器
+ *
  *   set_led = 1：红灯闪 6 次
  *   set_led = 2：绿灯闪 6 次
  *   其它非 0 值：关闭所有灯
@@ -268,10 +268,15 @@ void dc_led_task(void *pdata)
 {
     LedPatternDef pattern;
     uint8_t command;
+    uint8_t run_on = 1;
+    uint32_t run_next_tick;
+    uint32_t now;
     OS_CPU_SR cpu_sr = 0;
 
     memset(&pattern, 0, sizeof(pattern));
     Led_AllOff();
+    LED_RUN(ON);
+    run_next_tick = OSTimeGet() + LED_RUN_HALF_PERIOD_TICKS;
     delay_ms(200);
 
     while (1)
@@ -296,54 +301,116 @@ void dc_led_task(void *pdata)
         }
 
         Led_Update(&pattern);
+
+        /* 运行指示灯：500ms 亮、500ms 灭，和提示灯互不影响 */
+        now = OSTimeGet();
+        if ((int32_t)(now - run_next_tick) >= 0)
+        {
+            run_next_tick += LED_RUN_HALF_PERIOD_TICKS;
+            run_on = !run_on;
+            LED_RUN(run_on ? ON : OFF);
+        }
+
         delay_ms(LED_TASK_POLL_MS);
     }
 }
 
+/*
+ * AC 输出处理
+ * 由 monitor_task 每 50ms 调用一次。
+ * 这里只做短小的 GPIO 输出，不会阻塞，所以不需要单独开任务。
+ */
+static void Control_Process(void)
+{
+	if(sys.ctrl->set_ac1 == 1) AC_CTRL1(ON);
+	else AC_CTRL1(OFF);
+
+	if(sys.ctrl->set_ac2 == 1) AC_CTRL2(ON);
+	else AC_CTRL2(OFF);
+
+	if(sys.ctrl->set_ac3 == 1) AC_CTRL3(ON);
+	else AC_CTRL3(OFF);
+}
+
+/*
+ * 监控任务
+ *   10ms 基准节拍：
+ *     - 每 10ms 处理盖子电机和把手传感器
+ *     - 每 50ms 处理一次 AC 输出
+ *
+ * Door_Process/Control_Process 都是非阻塞的短函数，可以放在同一任务里。
+ * 罐锁的 Lock_Process 内部会阻塞等 Modbus，所以仍然保留独立任务。
+ */
 void monitor_task(void *pdata)
 {
+	uint8_t control_div = 0;
+
 	while(1)
 	{
-		/* 每 20ms 处理一次盖子电机：读限位、开/关盖、更新 case_state */
+		/* 盖子电机：读限位、开/关盖、更新 case_state */
 		Door_Process(&door);
-		
+
+		/* 50ms 分频：10ms * 5 */
+		if(++control_div >= 5)
+		{
+			control_div = 0;
+			Control_Process();
+		}
+
 		/* 读取把手/磁铁传感器，发布给 HMI */
 		if(TANK_LOCK == 0)
 			sys.ctrl->tank_lock = 0;
 		else
 			sys.ctrl->tank_lock = 1;
 
-		delay_ms(20);
-	}
-}
-void control_task(void *pdata)
-{
-	float temp = 0;
-	Dac1_Set_Vol((u16)temp);
-	delay_ms(1000);
-	while(1)
-	{
-		//ac out
-		if(sys.ctrl->set_ac1 == 1) AC_CTRL1(ON);
-		else AC_CTRL1(OFF);
-		if(sys.ctrl->set_ac2 == 1) AC_CTRL2(ON);
-		else AC_CTRL2(OFF);
-		if(sys.ctrl->set_ac3 == 1) AC_CTRL3(ON);
-		else AC_CTRL3(OFF);	
-	//get load current
-		delay_ms(50);
+		delay_ms(10);
 	}
 }
 
-void led_task(void *pdata)
+/*
+ * 加速度计任务
+ * 每 10ms 读一次 LIS302DL，把 x/y/z 原始值发布到保持寄存器，
+ * 供 HMI 的震动过大保护使用。
+ */
+void sensor_task(void *pdata)
 {
-	static short delay=500;
+	MEMS_TYPEDEF mems;
+	uint8_t ret;
+	uint8_t errors = 0;
+
+	delay_ms(500);
+
+	/* 传感器没插好或型号不对时，每 500ms 重试一次初始化 */
+	while(LIS302DL_Init() != 0)
+	{
+		delay_ms(500);
+	}
+
 	while(1)
-	{	
-		LED_RUN(ON);
-		delay_ms(delay);
-		LED_RUN(OFF);
-		delay_ms(delay);
+	{
+		ret = LIS302DL_Output(&mems);
+		if(ret == 0)
+		{
+			/* 读到新数据才更新，避免把旧值反复发布 */
+			sys.ctrl->x = mems.x;
+			sys.ctrl->y = mems.y;
+			sys.ctrl->z = mems.z;
+			errors = 0;
+		}
+		else if(ret == 2)
+		{
+			/* 连续 10 次 I2C 错误，重新初始化总线 */
+			if(++errors >= 10)
+			{
+				errors = 0;
+				while(LIS302DL_Init() != 0)
+				{
+					delay_ms(500);
+				}
+			}
+		}
+
+		delay_ms(10);
 	}
 }
 

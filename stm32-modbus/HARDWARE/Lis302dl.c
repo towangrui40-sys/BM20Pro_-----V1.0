@@ -1,104 +1,217 @@
+/******************************************************************************
+ * æ–‡ä»¶ï¼šLis302dl.c
+ * åŠŸèƒ½ï¼šLIS302DL ä¸‰è½´åŠ é€Ÿåº¦è®¡é©±åŠ¨ï¼ˆè½¯ä»¶ I2Cï¼‰
+ *
+ * ç¡¬ä»¶è¿æ¥ï¼š
+ *   PB6 = SCL
+ *   PB7 = SDA
+ *   7 ä½ I2C åœ°å€ 0x1Cï¼ˆSA0 = 0ï¼‰ï¼Œå†™åœ°å€ 0x38ï¼Œè¯»åœ°å€ 0x39
+ *
+ * æ•°æ®æ ¼å¼ï¼š
+ *   LIS302DL è¾“å‡ºä¸º 8 ä½æœ‰ç¬¦å·æ•°ï¼Œ2g é‡ç¨‹æ—¶çº¦ 18mg/LSBã€‚
+ *   æœ¬é©±åŠ¨æŠŠåŸå§‹æœ‰ç¬¦å·æ•°ç›´æ¥å†™å…¥ MEMS_TYPEDEF.x/y/zï¼Œ
+ *   HMI çš„éœ‡åŠ¨é˜ˆå€¼ 48/65/75/90/200 ä¹Ÿæ˜¯æŒ‰åŸå§‹ count è®¾è®¡çš„ã€‚
+ ******************************************************************************/
+
 #include "myiic.h"
 #include "lIS302DL.h"
 
+/*
+ * å†™ä¸€ä¸ªå¯„å­˜å™¨
+ * è¿”å›ï¼š0 æˆåŠŸï¼Œ1 å¤±è´¥
+ *
+ * IIC_Wait_Ack() å¤±è´¥æ—¶å†…éƒ¨å·²ç»è°ƒç”¨ IIC_Stop() é‡Šæ”¾æ€»çº¿ï¼Œ
+ * æ‰€ä»¥è¿™é‡Œç›´æ¥è¿”å›ï¼Œä¸å†é‡å¤ Stopï¼Œä¹Ÿä¸ç»§ç»­å‘é€åé¢çš„å­—èŠ‚ã€‚
+ */
+uint8_t LIS302DL_WriteReg(uint8_t reg, uint8_t value)
+{
+    IIC_Start();
 
-//
-void LIS302DL_Write(unsigned char reg,unsigned char info)
-{   
-    IIC_Start(); 
-    IIC_Send_Byte(0x38);  
-    IIC_Wait_Ack();     
-    IIC_Send_Byte(reg);  
-    IIC_Wait_Ack(); 
-    IIC_Send_Byte(info); 
-    IIC_Wait_Ack();
+    IIC_Send_Byte(LIS302DL_I2C_ADDR_W);
+    if (IIC_Wait_Ack())
+    {
+        return 1;
+    }
+
+    IIC_Send_Byte(reg);
+    if (IIC_Wait_Ack())
+    {
+        return 1;
+    }
+
+    IIC_Send_Byte(value);
+    if (IIC_Wait_Ack())
+    {
+        return 1;
+    }
+
     IIC_Stop();
+    return 0;
 }
 
-//
-int8_t LIS302DL_Read(uint8_t address)
+/*
+ * è¯»ä¸€ä¸ªå¯„å­˜å™¨
+ * è¿”å›ï¼š0 æˆåŠŸï¼Œ1 å¤±è´¥
+ *
+ * æ—¶åºï¼šStart -> å†™åœ°å€ -> å†™å¯„å­˜å™¨åœ°å€ -> é‡å¤ Start -> è¯»åœ°å€
+ *       -> è¯» 1 å­—èŠ‚ -> NACK -> Stop
+ *
+ * æ³¨æ„ï¼šIIC_Read_Byte(0) å†…éƒ¨å·²ç»å‘é€ NACKï¼Œåé¢ä¸èƒ½å†è°ƒç”¨ IIC_NAck()ï¼Œ
+ *       å¦åˆ™ä¼šå¤šå‘ä¸€ä¸ª SCL æ—¶é’Ÿã€‚
+ */
+uint8_t LIS302DL_ReadReg(uint8_t reg, uint8_t *value)
 {
-    signed char val;
-    IIC_Start(); 
-    IIC_Send_Byte(0x38);  
-    IIC_Wait_Ack();     
+    IIC_Start();
 
-    IIC_Send_Byte(address);  
-    IIC_Wait_Ack(); 
+    IIC_Send_Byte(LIS302DL_I2C_ADDR_W);
+    if (IIC_Wait_Ack())
+    {
+        return 1;
+    }
+
+    IIC_Send_Byte(reg);
+    if (IIC_Wait_Ack())
+    {
+        return 1;
+    }
 
     IIC_Start();
-    IIC_Send_Byte(0x39); 
-    IIC_Wait_Ack();
-    val = IIC_Read_Byte(0); 
-    IIC_NAck();
-    IIC_Stop();
-
-    return(val);
-}
-
-u8 Lis302DL_Output(MEMS_TYPEDEF* mems)
-{
-    if((LIS302DL_Read(0x27) & 0x08) != 0){
-
-        mems->x = (s16)LIS302DL_Read(0x29);  //x
-        mems->y = (s16)LIS302DL_Read(0x2B);  //y
-        mems->z = (s16)LIS302DL_Read(0x2D);  //z
-        return 0;
+    IIC_Send_Byte(LIS302DL_I2C_ADDR_R);
+    if (IIC_Wait_Ack())
+    {
+        return 1;
     }
 
-    return 1;
+    *value = IIC_Read_Byte(0);      /* ack=0ï¼šè¯»å®Œåå› NACK */
+    IIC_Stop();
+    return 0;
 }
 
-//
-void LIS302DL_Config(void)
-{
-	LIS302DL_Write(CTRL_REG1,0xc7);
-	//DR=1,¼ÓËÙ¶ÈµÄ²É¼¯ÆµÂÊÎª 400Hz;
-	//PD=1,LIS302DL¹¤×÷ÔÚÆÕÍ¨¹¦ºÄÄ£Ê½;
-	//FS=0,×î´ó²âÁ¿·¶Î§Îª 2g£¨2.3g£©,ÁéÃô¶ÈÎª 18mg/LSB£¨16.2£©,ÊÜÎÂ¶ÈÓ°ÏìÎª 0.01%, ÔÚ0¼ÓËÙ¶ÈÊ±.Æ®ÒÆÎª 40mg;
-	//STP=0,STM=0,±íÊ¾ LIS302DL ¹¤×÷ÔÚÆÕÍ¨Ä£Ê½,¼´·Ç×Ô¼ìÄ£Ê½;
-	//Zen=1,±íÊ¾Ê¹ÄÜ Z Öá·½Ïò¼ÓËÙ¶È²É¼¯; 
-	//Yen=1,±íÊ¾Ê¹ÄÜ Y Öá·½Ïò¼ÓËÙ¶È²É¼¯; 
-	//Xen=1,±íÊ¾Ê¹ÄÜ X Öá·½Ïò¼ÓËÙ¶È²É¼¯; 
-  LIS302DL_Write(CTRL_REG2,0x00);
-	//ÏÂÃæ²Ù×÷ÊÇ¶ÔÖĞ¶ÏºÍ¸ßÍ¨ÂË²¨Æ÷µÈÅäÖÃ£¬ÎÒÃÇ²»Ê¹ÓÃ²»ÓÃÅäÖÃ£¬¾ÍÄ¬ÈÏÖµ¼´¿É
-	//	LIS302DL_Write(CTRL_REG2,0x00);
-	//SIM=0,±íÊ¾ SPI ¿ÚÎª 4 ×ÜÏß;£¨Õâ¸öÒªÏÈ¿´cs¾ö¶¨£©
-	//BOOT=0,±íÊ¾²»ÒªË¢ĞÂ´æ´¢Æ÷µÄÄÚÈİ,ÎªÆÕÍ¨Ä£Ê½;
-	//FDS=0,±íÊ¾½ûÓÃ¸ßÍ¨ÂËÆ÷;
-	//HP_FF_W_U2=0, ½ûÓÃ×ÔÓÉÂäÌå/»½ĞÑ¸ßÍ¨ÂË²¨Æ÷ 2;
-	//HP_FF_W_U1=0, ½ûÓÃ×ÔÓÉÂäÌå/»½ĞÑ¸ßÍ¨ÂË²¨Æ÷ 1;
-	//HP_coeff2=0,HP_coeff1=0,DR=0, ±íÊ¾×ÔÓÉÂäÌå/»½ĞÑ¸ßÍ¨ÂË²¨Æ÷µÄÊä³ö½ØÖ¹ÆµÂÊÎª 2Hz;
-  LIS302DL_Write(CTRL_REG3,0xC1);
-	//	LIS302DL_Write(CTRL_REG3,0xC1);
-	//IHL=1,±íÊ¾ÔÚÖĞ¶Ï·¢ÉúÊ±,ÖĞ¶Ï½Å(INT1 ºÍ INT2)Êä³öµÍµçÆ½;
-	//PP_OD=1,±íÊ¾ÖĞ¶Ï½Å¿ªÂ©Êä³ö;
-	//I2CFG2=0,I2CFG1=0,I2CFG0=0,±íÊ¾ INT2 ½ÅÊä³öµÍµçÆ½;
-	//I1CFG2=0,I1CFG1=0,I1CFG0=1,±íÊ¾ INT1 ½ÅÊÇ¸ù¾İ×ÔÓÉÂäÌå/»½ĞÑ 1 ¼Ä´æÆ÷µÄÊä³ö¶ø·¢Éú±ä»¯;
-  LIS302DL_Write(FF_WU_THS_1,0x28);
-	//	LIS302DL_Write(FF_WU_THS_1,0x28);		
-	//DCRM=0,±íÊ¾ÔÚ²»ÔÙÓĞÖĞ¶Ï·¢ÉúÊ±,³ÖĞøÊ±¼ä¼ÆÊıÆ÷»á±»¸´Î»µ½³õÖµ;
-	//THS0~THS6,ÓÃÀ´ÉèÖÃ×ÔÓÉÂäÌå/»½ĞÑµÄÏÂÏŞÖµ--720mg;	
-  LIS302DL_Write(FF_WU_DURATION_1,40);
-	//	LIS302DL_Write(FF_WU_DURATION_1,40);	
-	//µ± DR=1 Ê±,¼ÓËÙ¶ÈµÄ²É¼¯ÆµÂÊÎª ;			
-	LIS302DL_Write(FF_WU_CFG_1,0x10); 	
-	//AOI=1,±íÊ¾ËùÓĞÖĞ¶ÏÊÂ¼şÏà»òºóÊä³ö;
-	//LIR=0,±íÊ¾½«ÖĞ¶ÏÇëÇó²»Ëø´æ;
-	//ZHIE=0,±íÊ¾ÔÚ Z Êä³ö¼Ä´æÆ÷µÄÖµ´óÓÚ Z ÖáµÄÉèÖÃÖµÊ±,½«²»»áÊ¹ÄÜ Z ÖáÖĞ¶Ï;
-	//ZLIE=1,±íÊ¾ÔÚ Z Êä³ö¼Ä´æÆ÷µÄÖµĞ¡ÓÚ Z ÖáµÄÉèÖÃÖµÊ±,½«²»»áÊ¹ÄÜ Z ÖáÖĞ¶Ï;
-	//YHIE=0,±íÊ¾ÔÚ Y Êä³ö¼Ä´æÆ÷µÄÖµ´óÓÚ Y ÖáµÄÉèÖÃÖµÊ±,½«²»»áÊ¹ÄÜ Y ÖáÖĞ¶Ï;
-	//YLIE=1,±íÊ¾ÔÚ Y Êä³ö¼Ä´æÆ÷µÄÖµĞ¡ÓÚ Y ÖáµÄÉèÖÃÖµÊ±,½«²»»áÊ¹ÄÜ Y ÖáÖĞ¶Ï;
-	//XHIE=1,±íÊ¾ÔÚ X Êä³ö¼Ä´æÆ÷µÄÖµ´óÓÚ X ÖáµÄÉèÖÃÖµÊ±,½«²»»áÊ¹ÄÜ X ÖáÖĞ¶Ï;
-	//XLIE=0,±íÊ¾ÔÚ X Êä³ö¼Ä´æÆ÷µÄÖµĞ¡ÓÚ X ÖáµÄÉèÖÃÖµÊ±,½«²»»áÊ¹ÄÜ X ÖáÖĞ¶Ï;
-}
-
-//
+/*
+ * åœ¨çº¿æ£€æµ‹
+ *   WHO_AM_I å¿…é¡»ç­‰äº 0x3B æ‰ç®— LIS302DLã€‚
+ *   ä¸èƒ½åªåˆ¤æ–­â€œé 0â€ï¼Œå¦åˆ™è¯»å¤±è´¥è¿”å› 0xFF ä¹Ÿä¼šè¢«è¯¯åˆ¤ä¸ºä¼ æ„Ÿå™¨å­˜åœ¨ã€‚
+ */
 uint8_t LIS302DL_Check(void)
 {
-    if(LIS302DL_Read(0x0f)){
-        return 1;
-    }else{
+    uint8_t who = 0;
+
+    if (LIS302DL_ReadReg(WHO_AM_I, &who) != 0)
+    {
         return 0;
     }
+
+    return (who == LIS302DL_WHO_AM_I) ? 1u : 0u;
+}
+
+/*
+ * åˆå§‹åŒ–ä¼ æ„Ÿå™¨
+ *   CTRL_REG1 = 0xC7ï¼š
+ *     DR=1   -> 400Hz é‡‡æ ·
+ *     PD=1   -> æ­£å¸¸å·¥ä½œ
+ *     FS=0   -> Â±2g é‡ç¨‹ï¼Œçº¦ 18mg/LSB
+ *     Zen/Yen/Xen=1 -> ä¸‰è½´ä½¿èƒ½
+ *   CTRL_REG2 = 0x00ï¼šå…³é—­é«˜é€šæ»¤æ³¢å™¨ï¼Œä¿ç•™é‡åŠ›ç›´æµåˆ†é‡
+ *
+ * ä¸‹é¢ä¿ç•™åŸæ¥çš„ CTRL_REG3/è‡ªç”±è½ä½“é…ç½®ï¼Œé¿å…æ”¹å˜ INT å¼•è„šè¡Œä¸ºï¼›
+ * å½“å‰è¯»å–ä½¿ç”¨è½®è¯¢ï¼Œä¸ä¾èµ–è¿™äº›ä¸­æ–­ã€‚
+ * æ³¨æ„ï¼šFF_WU_CFG_1 = 0x10 å®é™…åªç½®äº† ZLIEï¼ŒåŸæ³¨é‡Šé‡Œå†™çš„
+ *       AOI/YLIE/XHIE ä¸å¯„å­˜å™¨å€¼ä¸ä¸€è‡´ã€‚
+ */
+uint8_t LIS302DL_Config(void)
+{
+    if (LIS302DL_WriteReg(CTRL_REG1, 0xC7) != 0)
+    {
+        return 1;
+    }
+
+    if (LIS302DL_WriteReg(CTRL_REG2, 0x00) != 0)
+    {
+        return 1;
+    }
+
+    if (LIS302DL_WriteReg(CTRL_REG3, 0xC1) != 0)
+    {
+        return 1;
+    }
+
+    if (LIS302DL_WriteReg(FF_WU_THS_1, 0x28) != 0)
+    {
+        return 1;
+    }
+
+    if (LIS302DL_WriteReg(FF_WU_DURATION_1, 40) != 0)
+    {
+        return 1;
+    }
+
+    if (LIS302DL_WriteReg(FF_WU_CFG_1, 0x10) != 0)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+/*
+ * åˆå§‹åŒ– I2Cã€æ£€æµ‹èŠ¯ç‰‡å¹¶é…ç½®ä¼ æ„Ÿå™¨
+ * è¿”å›ï¼š0 æˆåŠŸï¼Œ1 å¤±è´¥
+ */
+uint8_t LIS302DL_Init(void)
+{
+    IIC_Init();
+
+    if (LIS302DL_Check() == 0)
+    {
+        return 1;
+    }
+
+    return LIS302DL_Config();
+}
+
+/*
+ * è¯»å–ä¸‰è½´åŠ é€Ÿåº¦
+ * è¿”å›ï¼š0=æœ‰æ–°æ•°æ®ï¼Œ1=è¿˜æ²¡æœ‰æ–°æ•°æ®ï¼Œ2=I2C é”™è¯¯
+ *
+ * STATUS_REG çš„ bit3 æ˜¯ ZYXDAï¼Œä¸‰è½´æ–°æ•°æ®æœ‰æ•ˆæ ‡å¿—ã€‚
+ * åªæœ‰è¯¥ä½ä¸º 1 æ—¶æ‰è¯» OUT_X/OUT_Y/OUT_Zï¼Œé¿å…é‡å¤è¯»æ—§æ•°æ®ã€‚
+ */
+uint8_t LIS302DL_Output(MEMS_TYPEDEF *mems)
+{
+    uint8_t status = 0;
+    uint8_t x = 0;
+    uint8_t y = 0;
+    uint8_t z = 0;
+
+    if (LIS302DL_ReadReg(STATUS_REG, &status) != 0)
+    {
+        return 2;
+    }
+
+    if ((status & 0x08) == 0)
+    {
+        return 1;
+    }
+
+    if (LIS302DL_ReadReg(OUT_X, &x) != 0)
+    {
+        return 2;
+    }
+
+    if (LIS302DL_ReadReg(OUT_Y, &y) != 0)
+    {
+        return 2;
+    }
+
+    if (LIS302DL_ReadReg(OUT_Z, &z) != 0)
+    {
+        return 2;
+    }
+
+    /* è¾“å‡ºå¯„å­˜å™¨æ˜¯ 8 ä½äºŒè¿›åˆ¶è¡¥ç ï¼Œè½¬æˆ int8_t åå†èµ‹ç»™ s16 å®Œæˆç¬¦å·æ‰©å±• */
+    mems->x = (int8_t)x;
+    mems->y = (int8_t)y;
+    mems->z = (int8_t)z;
+
+    return 0;
 }
