@@ -35,6 +35,7 @@
 ..\obj\mbtcp.o: ..\SYSTEM\usart\usart.h
 ..\obj\mbtcp.o: ..\HARDWARE\lIS302DL.h
 ..\obj\mbtcp.o: ..\HARDWARE\door_ctrl.h
+..\obj\mbtcp.o: ..\HARDWARE\Vfd_Ctrl.h
 ..\obj\mbtcp.o: ..\HARDWARE\Card.h
 ..\obj\mbtcp.o: ..\RTU\rtu_api.h
 ..\obj\mbtcp.o: ..\RTU\rtu_protocol.h

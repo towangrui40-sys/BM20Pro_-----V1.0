@@ -35,6 +35,7 @@
 ..\obj\mbfuncinput.o: ..\SYSTEM\usart\usart.h
 ..\obj\mbfuncinput.o: ..\HARDWARE\lIS302DL.h
 ..\obj\mbfuncinput.o: ..\HARDWARE\door_ctrl.h
+..\obj\mbfuncinput.o: ..\HARDWARE\Vfd_Ctrl.h
 ..\obj\mbfuncinput.o: ..\HARDWARE\Card.h
 ..\obj\mbfuncinput.o: ..\RTU\rtu_api.h
 ..\obj\mbfuncinput.o: ..\RTU\rtu_protocol.h

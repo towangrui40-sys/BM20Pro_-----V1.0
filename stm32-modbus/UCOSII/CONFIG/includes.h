@@ -33,6 +33,7 @@
 
 #include "lIS302DL.h"
 #include "door_ctrl.h"
+#include "Vfd_Ctrl.h"
 #include "Card.h"
 
 #include "rtu_api.h"

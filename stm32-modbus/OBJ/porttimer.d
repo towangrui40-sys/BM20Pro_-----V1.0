@@ -35,6 +35,7 @@
 ..\obj\porttimer.o: ..\SYSTEM\usart\usart.h
 ..\obj\porttimer.o: ..\HARDWARE\lIS302DL.h
 ..\obj\porttimer.o: ..\HARDWARE\door_ctrl.h
+..\obj\porttimer.o: ..\HARDWARE\Vfd_Ctrl.h
 ..\obj\porttimer.o: ..\HARDWARE\Card.h
 ..\obj\porttimer.o: ..\RTU\rtu_api.h
 ..\obj\porttimer.o: ..\RTU\rtu_protocol.h

@@ -657,6 +657,11 @@
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\Lis302dl.c</FilePath>
             </File>
+            <File>
+              <FileName>Vfd_Ctrl.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\Vfd_Ctrl.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

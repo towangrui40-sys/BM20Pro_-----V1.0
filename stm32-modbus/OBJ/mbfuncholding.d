@@ -35,6 +35,7 @@
 ..\obj\mbfuncholding.o: ..\SYSTEM\usart\usart.h
 ..\obj\mbfuncholding.o: ..\HARDWARE\lIS302DL.h
 ..\obj\mbfuncholding.o: ..\HARDWARE\door_ctrl.h
+..\obj\mbfuncholding.o: ..\HARDWARE\Vfd_Ctrl.h
 ..\obj\mbfuncholding.o: ..\HARDWARE\Card.h
 ..\obj\mbfuncholding.o: ..\RTU\rtu_api.h
 ..\obj\mbfuncholding.o: ..\RTU\rtu_protocol.h

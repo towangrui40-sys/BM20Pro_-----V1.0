@@ -42,8 +42,12 @@ xMBMasterPortTimersInit( USHORT usTim1Timerout50us )
 	/* TIM4 clock enable */
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 	TIM_DeInit(TIM2);
-	/* Compute the prescaler value */
-	PrescalerValue = (uint16_t) (36000000UL / 20000) - 1; // 1/20000=50us 
+	/*
+	 * TIM2 挂在 APB1，但 STM32F103 的定时器时钟是 APB1 x2 = 72MHz。
+	 * 原代码按 36MHz 算，实际 tick 是 25us，T3.5 和响应超时都只有一半。
+	 * 这里用 SystemCoreClock，保证 20kHz（50us）计数。
+	 */
+	PrescalerValue = (uint16_t)(SystemCoreClock / 20000UL) - 1;
 	/* Time base configuration */
 	TIM_TimeBaseStructure.TIM_Period = (uint16_t) usTim1Timerout50us;
 	TIM_TimeBaseStructure.TIM_Prescaler = PrescalerValue;

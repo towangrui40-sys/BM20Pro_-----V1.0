@@ -34,6 +34,7 @@
 ..\obj\main.o: ..\SYSTEM\usart\usart.h
 ..\obj\main.o: ..\HARDWARE\lIS302DL.h
 ..\obj\main.o: ..\HARDWARE\door_ctrl.h
+..\obj\main.o: ..\HARDWARE\Vfd_Ctrl.h
 ..\obj\main.o: ..\HARDWARE\Card.h
 ..\obj\main.o: ..\RTU\rtu_api.h
 ..\obj\main.o: ..\RTU\rtu_protocol.h

@@ -131,10 +131,27 @@ BOOL xMBMasterPortSerialInit(UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, e
 
 	   //USART 初始化设置
 
-		USART_InitStructure.USART_BaudRate = ulBaudRate;//一般设置为9600;
-		USART_InitStructure.USART_WordLength = USART_WordLength_8b;//字长为8位数据格式
-		USART_InitStructure.USART_StopBits = USART_StopBits_1;//一个停止位
-		USART_InitStructure.USART_Parity = USART_Parity_No;//无奇偶校验位
+		USART_InitStructure.USART_BaudRate = ulBaudRate;
+		USART_InitStructure.USART_StopBits = USART_StopBits_1;
+
+		/*
+		 * Modbus RTU 的校验位必须按 eParity 配置：
+		 *   无校验：8 位数据 + 无校验
+		 *   奇/偶校验：9 位字长（8 位数据 + 1 位校验）
+		 * 原代码固定写 USART_Parity_No，VFD 若是 8E1/8O1 会完全收不到。
+		 */
+		if (eParity == MB_PAR_NONE)
+		{
+			USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+			USART_InitStructure.USART_Parity = USART_Parity_No;
+		}
+		else
+		{
+			USART_InitStructure.USART_WordLength = USART_WordLength_9b;
+			USART_InitStructure.USART_Parity =
+				(eParity == MB_PAR_EVEN) ? USART_Parity_Even : USART_Parity_Odd;
+		}
+
 		USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;//无硬件数据流控制
 		USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;	//收发模式
 
@@ -159,9 +176,11 @@ BOOL xMBMasterPortSerialInit(UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, e
 		while (USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET);//等待空闲帧发送完成后再清零发送完成标志（警告：如果不使能USART_Mode_Tx，会导致单片机在这里死机）
 		USART_ClearFlag(USART2, USART_FLAG_TC);	//清除发送完成标志
 	 
-		//USART_ITConfig(USART3, USART_IT_RXNE, DISABLE);
-		//USART_ITConfig(USART3, USART_IT_TXE, DISABLE);
-		USART_ITConfig(USART3, USART_IT_IDLE, ENABLE);
+		/*
+		 * 这里原来误写成 USART3_IT_IDLE，USART2 和 USART3 的 IDLE 中断会
+		 * 互相干扰。USART2 的 IDLE 中断由 vMBMasterPortSerialEnable()
+		 * 在启动接收时统一打开，这里不再重复配置。
+		 */
 		USART_ITConfig(USART2, USART_IT_TC, ENABLE);
 		USART_DMACmd(USART2 ,   USART_DMAReq_Tx,ENABLE);
 		USART_DMACmd(USART2 ,   USART_DMAReq_Rx,ENABLE);
@@ -288,6 +307,8 @@ BOOL xMBMasterPortSerialDMASendData(void)
 	{
 		//memcpy(USART3_DMA_TX_Buffer , send_buffer , nSendBytes);
 		DMA_Cmd(DMA1_Channel7 , DISABLE);                    				//关闭DMA传输
+		/* 清掉上一帧遗留的传输完成/错误标志，避免新帧不启动 */
+		DMA_ClearFlag(DMA1_FLAG_GL7 | DMA1_FLAG_TC7 | DMA1_FLAG_HT7 | DMA1_FLAG_TE7);
 		DMA_SetCurrDataCounter(DMA1_Channel7 , DMA_MasterTX_Cnt);  				//数据传输量
 		DMA_Cmd(DMA1_Channel7 , ENABLE);               						//开启DMA传输
 		return TRUE;

@@ -42,6 +42,7 @@
 "..\obj\card.o"
 "..\obj\door_ctrl.o"
 "..\obj\lis302dl.o"
+"..\obj\vfd_ctrl.o"
 "..\obj\delay.o"
 "..\obj\sys.o"
 "..\obj\gpio.o"

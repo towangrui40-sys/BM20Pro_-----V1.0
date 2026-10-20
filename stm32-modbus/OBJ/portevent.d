@@ -36,6 +36,7 @@
 ..\obj\portevent.o: ..\SYSTEM\usart\usart.h
 ..\obj\portevent.o: ..\HARDWARE\lIS302DL.h
 ..\obj\portevent.o: ..\HARDWARE\door_ctrl.h
+..\obj\portevent.o: ..\HARDWARE\Vfd_Ctrl.h
 ..\obj\portevent.o: ..\HARDWARE\Card.h
 ..\obj\portevent.o: ..\RTU\rtu_api.h
 ..\obj\portevent.o: ..\RTU\rtu_protocol.h

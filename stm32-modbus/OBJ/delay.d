@@ -34,6 +34,7 @@
 ..\obj\delay.o: ..\SYSTEM\usart\usart.h
 ..\obj\delay.o: ..\HARDWARE\lIS302DL.h
 ..\obj\delay.o: ..\HARDWARE\door_ctrl.h
+..\obj\delay.o: ..\HARDWARE\Vfd_Ctrl.h
 ..\obj\delay.o: ..\HARDWARE\Card.h
 ..\obj\delay.o: ..\RTU\rtu_api.h
 ..\obj\delay.o: ..\RTU\rtu_protocol.h

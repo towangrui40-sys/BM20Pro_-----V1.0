@@ -19,6 +19,7 @@
  * File: $Id: user_mb_app_m.c,v 1.60 2013/11/23 11:49:05 Armink $
  */
 #include "user_mb_app.h"
+#include "Vfd_Ctrl.h"
 
 //SM_RTU_MemDef m_usRegHoldingBuf[SM_ADDR_HREG_TOTAL];
 
@@ -133,6 +134,36 @@ eMBErrorCode eMBMasterRegHoldingCB(UCHAR * pucRegBuffer, USHORT usAddress,
 
     /* it already plus one in modbus function method. */
     usAddress--;
+
+    /*
+     * 变频器从站 2 的读寄存器从 0x1000 开始，而通用主站缓冲区从索引 0
+     * 开始。这里把 0x1000~0x101F 映射到 usMRegHoldBuf[1][0~0x1F]，
+     * 这样 Vfd_Ctrl.c 可以直接按
+     *   usMRegHoldBuf[VFD_SLAVE_ADDR - 1][VFD_IDX_xxx]
+     * 取状态数据。
+     *
+     * 写命令 0x2000/0x010D 的应答只表示从站已接收，不需要保存，
+     * 直接返回成功，避免被通用范围检查判成 MB_ENOREG。
+     */
+    if (ucMBMasterGetDestAddress() == VFD_SLAVE_ADDR)
+    {
+        if ((usAddress >= VFD_READ_WINDOW_BASE) &&
+            ((usAddress + usNRegs) <=
+             (VFD_READ_WINDOW_BASE + VFD_READ_WINDOW_SIZE)))
+        {
+            iRegIndex = usAddress - VFD_READ_WINDOW_BASE;
+            while (usNRegs > 0u)
+            {
+                pusRegHoldingBuf[iRegIndex] =
+                    (USHORT)(*pucRegBuffer++ << 8);
+                pusRegHoldingBuf[iRegIndex] |= *pucRegBuffer++;
+                iRegIndex++;
+                usNRegs--;
+            }
+        }
+
+        return MB_ENOERR;
+    }
 
     if ((usAddress >= m_REG_HOLDING_START)
             && (usAddress + usNRegs <= m_REG_HOLDING_START + m_REG_HOLDING_NREGS))

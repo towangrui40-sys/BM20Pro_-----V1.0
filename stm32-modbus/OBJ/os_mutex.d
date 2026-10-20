@@ -34,6 +34,7 @@
 ..\obj\os_mutex.o: ..\SYSTEM\usart\usart.h
 ..\obj\os_mutex.o: ..\HARDWARE\lIS302DL.h
 ..\obj\os_mutex.o: ..\HARDWARE\door_ctrl.h
+..\obj\os_mutex.o: ..\HARDWARE\Vfd_Ctrl.h
 ..\obj\os_mutex.o: ..\HARDWARE\Card.h
 ..\obj\os_mutex.o: ..\RTU\rtu_api.h
 ..\obj\os_mutex.o: ..\RTU\rtu_protocol.h

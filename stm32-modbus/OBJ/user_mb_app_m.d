@@ -39,6 +39,7 @@
 ..\obj\user_mb_app_m.o: ..\SYSTEM\usart\usart.h
 ..\obj\user_mb_app_m.o: ..\HARDWARE\lIS302DL.h
 ..\obj\user_mb_app_m.o: ..\HARDWARE\door_ctrl.h
+..\obj\user_mb_app_m.o: ..\HARDWARE\Vfd_Ctrl.h
 ..\obj\user_mb_app_m.o: ..\HARDWARE\Card.h
 ..\obj\user_mb_app_m.o: ..\RTU\rtu_api.h
 ..\obj\user_mb_app_m.o: ..\RTU\rtu_protocol.h

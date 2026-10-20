@@ -31,6 +31,7 @@ void Init_Rtu_RegHoldingBuf(SysDataDef* dat,short *buf)
 #define DC_LED_TASK_PRIO						12
 #define MONITOR_TASK_PRIO						11
 #define SENSOR_TASK_PRIO						9
+#define VFD_TASK_PRIO							8
 
 /* 罐锁任务优先级：低于 hmi/com 任务，阻塞等待 Modbus 应答时让主站任务运行 */
 #define TANK_LOCK_TASK_PRIO					7	
@@ -42,6 +43,7 @@ void Init_Rtu_RegHoldingBuf(SysDataDef* dat,short *buf)
 #define START_STK_SIZE  				256
 #define MONITOR_STK_SIZE				1024
 #define SENSOR_STK_SIZE					256
+#define VFD_STK_SIZE					512
 #define DC_LED_STK_SIZE  		    	64
 /* 罐锁任务栈：Lock_Process 内部会调用 FreeModbus，栈比原来的 256 加大到 512 */
 #define TANK_LOCK_STK_SIZE			512
@@ -52,6 +54,7 @@ void Init_Rtu_RegHoldingBuf(SysDataDef* dat,short *buf)
 OS_STK START_TASK_STK[START_STK_SIZE];
 OS_STK MONITOR_TASK_STK[MONITOR_STK_SIZE];
 OS_STK SENSOR_TASK_STK[SENSOR_STK_SIZE];
+OS_STK VFD_TASK_STK[VFD_STK_SIZE];
 OS_STK DC_LED_TASK_STK[DC_LED_STK_SIZE];
 OS_STK TANK_LOCK_TASK_STK[TANK_LOCK_STK_SIZE];
 OS_STK HMI_INTERFACE_TASK_STK[HMI_INTERFACE_STK_SIZE];
@@ -60,6 +63,7 @@ OS_STK COM_INTERFACE_TASK_STK[COM_INTERFACE_STK_SIZE];
 void start_task(void *pdata);
 void monitor_task(void *pdata);
 void sensor_task(void *pdata);
+void vfd_task(void *pdata);
 void dc_led_task(void *pdata);	
 void tank_lock_task(void *pdata);
 void hmi_interface_task(void *pdata);
@@ -93,6 +97,7 @@ void start_task(void *pdata)
 	OSTaskCreate(tank_lock_task,(void *)0,(OS_STK*)&TANK_LOCK_TASK_STK[TANK_LOCK_STK_SIZE-1],TANK_LOCK_TASK_PRIO);	
 	OSTaskCreate(monitor_task,(void *)0,(OS_STK*)&MONITOR_TASK_STK[MONITOR_STK_SIZE-1],MONITOR_TASK_PRIO);
 	OSTaskCreate(sensor_task,(void *)0,(OS_STK*)&SENSOR_TASK_STK[SENSOR_STK_SIZE-1],SENSOR_TASK_PRIO);
+	OSTaskCreate(vfd_task,(void *)0,(OS_STK*)&VFD_TASK_STK[VFD_STK_SIZE-1],VFD_TASK_PRIO);
 	OSTaskCreate(dc_led_task,(void *)0,(OS_STK*)&DC_LED_TASK_STK[DC_LED_STK_SIZE-1],DC_LED_TASK_PRIO);
 	OSTaskSuspend(START_TASK_PRIO);
 	OS_EXIT_CRITICAL();
@@ -411,6 +416,28 @@ void sensor_task(void *pdata)
 		}
 
 		delay_ms(10);
+	}
+}
+
+/*
+ * 变频器任务
+ * 每 50ms 调用一次 Vfd_Process：
+ *   节拍 0：写启停命令/速度设定（只在值变化时写）
+ *   节拍 1：读 0x1000 起的运行状态和输出电流
+ *   节拍 2：读 0x1017 的实际速度
+ *
+ * 变频器和罐锁共用 USART2 的 Modbus 主站，优先级低于罐锁任务，
+ * 让锁动作优先访问总线。
+ */
+void vfd_task(void *pdata)
+{
+	delay_ms(1000);
+	Vfd_Init();
+
+	while(1)
+	{
+		Vfd_Process();
+		delay_ms(VFD_POLL_MS);
 	}
 }
 
