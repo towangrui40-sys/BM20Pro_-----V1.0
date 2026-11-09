@@ -1,53 +1,47 @@
-/******************** (C) COPYRIGHT 2015 ********************
-* ÎÄ¼şÃû          : CARD.h
-* ×÷Õß            : ÓÅÁé¿Æ¼¼¿ª·¢ÍÅ¶Ó
-* °æ±¾            : V3.1.0.0
-* ÈÕÆÚ            : 2015-5-10
-* ÃèÊö            : ¼¯ºÏÁËÄ£¿é¶Ô¿¨Æ¬µÄËùÓĞ·¢ËÍÃüÁî²Ù×÷
-										¿ÉÒÔÑ¡ÔñÓĞÓÃµÄµ÷ÓÃ£¬ÎŞÓÃµÄÉ¾³ı
-										»¹ÓĞÃüÁîµÄ½âÎö£¬½«ÃüÁîÖĞµÄ¿¨ºÅºÍÊı¾İµÈ´æµ½Card½á¹¹ÌåÖĞ
-* ¼¼ÊõÖ§³Ö        : QQ: 3419865840
-*********************************************************************************/
-
 #ifndef _CARD_H
 #define _CARD_H
 
+/* YL0202 ä¸²å£å¸§æœ€å¤§é•¿åº¦ï¼šå‘½ä»¤å±‚æœ€é•¿ 0x7Eï¼Œè¿™é‡Œç•™ 64 å­—èŠ‚ç»™å¸¸ç”¨å¡æ“ä½œ */
+#define CARD_CMD_BUF_SIZE       64
 
-/* Íâ²¿ÀàĞÍ -------------------------------------------------------------------*/
 typedef struct _CMD
 {
-  unsigned char ReceiveBuffer[32];
-	unsigned char SendBuffer[32];
-  unsigned char ReceivePoint;
-	unsigned char Code;
-}CMD;
+    unsigned char ReceiveBuffer[CARD_CMD_BUF_SIZE];
+    unsigned char SendBuffer[CARD_CMD_BUF_SIZE];
+    volatile unsigned char ReceivePoint;
+    unsigned char Code;
+} CMD;
 
 typedef struct _CARD
 {
-	unsigned int Type;
-	unsigned long UID;
-	unsigned long Value;
-	unsigned char KeyA[6];
-	unsigned char KeyB[6];
-	unsigned char BlockData[16];
-	unsigned char NocardData[5];
-}CARD;
+    unsigned int  Type;         /* å¡ç±»å‹ï¼š0x0400=S50ï¼Œ0x4400=Ultralight */
+    unsigned long UID;          /* å¡å·ï¼Œå·²æŒ‰ä½å­—èŠ‚åœ¨å‰è½¬æ¢ */
+    unsigned long Value;        /* å……å€¼/æ‰£æ¬¾åçš„ä½™é¢ */
+    unsigned char KeyA[6];
+    unsigned char KeyB[6];
+    unsigned char BlockData[16];
+    unsigned char NocardData[5];
+    unsigned char LastStatus;   /* æœ€è¿‘ä¸€æ¬¡å‘½ä»¤çŠ¶æ€ */
+    volatile unsigned char NewData; /* æ”¶åˆ°æœ‰æ•ˆå¡æ•°æ®åç½® 1ï¼Œåº”ç”¨å¤„ç†å®Œæ¸… 0 */
+} CARD;
 
-/* Íâ²¿±äÁ¿ -------------------------------------------------------------------*/
 extern CARD Card;
 extern CMD Cmd;
-/* Íâ²¿º¯Êı ------------------------------------------------------------------ */
+
+void Card_Init(void);
+unsigned char Card_Process(void);
+
 void OpenAutoReadCard(void);
 void CloseAutoReadCard(void);
 void OneKeyReadCard(void);
-void OneKeyMakeCard(unsigned char block, unsigned long value, unsigned char *keyA, unsigned char *keyB, unsigned char *keyBOld);
+void OneKeyMakeCard(unsigned char block, unsigned long value,
+                    unsigned char *keyA, unsigned char *keyB,
+                    unsigned char *keyBOld);
 void OneKeyInc(unsigned char block, unsigned char *key, unsigned long value);
 void OneKeyDec(unsigned char block, unsigned char *key, unsigned long value);
 void OneKeyReadBlock(unsigned char block, unsigned char *keyA);
-void OneKeyWriteBlock(unsigned char block, unsigned char *keyB, unsigned char *blockData);
+void OneKeyWriteBlock(unsigned char block, unsigned char *keyB,
+                      unsigned char *blockData);
 unsigned char CommandProcess(void);
 
-#endif /* __Card_H */
-
-/***************** (C) COPYRIGHT 2017 ÓÅÁé¿Æ¼¼***** END OF FILE ****************/
-
+#endif

@@ -1,380 +1,347 @@
-/******************** (C) COPYRIGHT 2015 ********************
-* ÎÄ¼şÃû          : Card.c
-* ×÷Õß            : ÓÅÁé¿Æ¼¼¿ª·¢ÍÅ¶Ó
-* °æ±¾            : V3.1.0.0
-* ÈÕÆÚ            : 2015-5-10
-* ÃèÊö            : ¼¯ºÏÁËÄ£¿é¶Ô¿¨Æ¬µÄËùÓĞ·¢ËÍÃüÁî²Ù×÷
-										¿ÉÒÔÑ¡ÔñÓĞÓÃµÄµ÷ÓÃ£¬ÎŞÓÃµÄÉ¾³ı
-										»¹ÓĞÃüÁîµÄ½âÎö£¬½«ÃüÁîÖĞµÄ¿¨ºÅºÍÊı¾İµÈ´æµ½Card½á¹¹ÌåÖĞ
-* ¼¼ÊõÖ§³Ö        : QQ: 3419865840
-********************************************************************************/
-/* °üº¬ÎÄ¼ş -------------------------------------------------------------------*/
+/******************************************************************************
+ * æ–‡ä»¶ï¼šCard.c
+ * åŠŸèƒ½ï¼šYL0202 è¯»å¡æ¨¡å— UART åè®®
+ *
+ * ç¡¬ä»¶ï¼š
+ *   USART3ï¼ŒPA10/PC11 é‡æ˜ å°„ï¼Ÿæœ¬å·¥ç¨‹ä½¿ç”¨ PC10=TXã€PC11=RX
+ *   9600ï¼Œ8 æ•°æ®ä½ï¼Œæ— æ ¡éªŒï¼Œ1 åœæ­¢ä½
+ *
+ * åè®®ï¼š
+ *   ä¼ è¾“å±‚ï¼š7F | é•¿åº¦ | å‘½ä»¤ç  | å‚æ•°2 | æ ¡éªŒ
+ *   å‚æ•°1 ä¸­å‡ºç° 7F æ—¶ï¼Œå‘é€ä¸¤é 7Fï¼›æ¥æ”¶åè¿˜åŸã€‚
+ *   æ ¡éªŒ = é•¿åº¦ XOR å‘½ä»¤ç  XOR å‚æ•°1ï¼ˆä¸åŒ…å«å¸§å¤´å’Œé‡å¤ 7Fï¼‰ã€‚
+ ******************************************************************************/
+
 #include "Card.h"
 #include "delay.h"
 #include "sys.h"
 #include "usart.h"
-/* ºê¶¨Òå ---------------------------------------------------------------------*/
-/* ±¾ÎÄ¼şÊ¹ÓÃµÄ±äÁ¿ -----------------------------------------------------------*/
+#include <string.h>
+
 CARD Card;
 CMD Cmd;
-/* ±¾ÎÄ¼şÊ¹ÓÃµÄº¯ÊıÉùÃ÷ -------------------------------------------------------*/
-unsigned char CheckSum(unsigned char *dat, unsigned char num);
-void UartSendCommand(u8 *buff, u8 cnt);
-u8 UartReceiveCommand(void);
-/* ±¾ÎÄ¼şº¯ÊıÌå ---------------------------------------------------------------*/
 
+static unsigned char CheckSum(unsigned char *dat, unsigned char num);
+static void UartSendCommand(u8 *buff, u8 cnt);
+static u8 UartReceiveCommand(void);
 
-/*******************************************************************************
-* º¯ÊıÃû         : OneKeyReadCard
-* ÃèÊö           : Ò»¼ü¶Á¿¨¡£
-* ÊäÈë           : ÎŞ
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : ÎŞ
-*******************************************************************************/
+void Card_Init(void)
+{
+    memset(&Card, 0, sizeof(Card));
+    memset(&Cmd, 0, sizeof(Cmd));
+
+    uart3_init(9600);
+    delay_ms(300);
+
+    /* é»˜è®¤å¼€å¯è‡ªåŠ¨è¯»å¡ï¼Œæ¨¡å—æ£€æµ‹åˆ°å¡åä¸»åŠ¨ä¸ŠæŠ¥ */
+    OpenAutoReadCard();
+}
+
+unsigned char Card_Process(void)
+{
+    unsigned char status;
+
+    status = CommandProcess();
+    Card.LastStatus = status;
+
+    /* åªæœ‰çœŸæ­£çš„å¡ç‰‡å‘½ä»¤æ‰ç½®æ–°æ•°æ®æ ‡å¿—ï¼Œ0xAB/0xAC çš„åº”ç­”ä¸ç®— */
+    if ((status == 0x00) && (Cmd.Code >= 0x10) && (Cmd.Code <= 0x15))
+    {
+        Card.NewData = 1;
+    }
+
+    return status;
+}
+
 void OpenAutoReadCard(void)
 {
-	unsigned char len = 8;
-	
-	Cmd.SendBuffer[0] = 0x08;
-	Cmd.SendBuffer[1] = 0xAB;
-	Cmd.SendBuffer[2] = 0x00;
-	Cmd.SendBuffer[3] = 0x03;
-	Cmd.SendBuffer[4] = 0x08;
-	Cmd.SendBuffer[5] = 0x05;
-	Cmd.SendBuffer[6] = 0x02;
-	Cmd.SendBuffer[7] = 0x07;
-	Cmd.SendBuffer[8] = 0xA8;
-	UartSendCommand(Cmd.SendBuffer, len + 1);
+    unsigned char len = 8;
+
+    Cmd.SendBuffer[0] = 0x08;
+    Cmd.SendBuffer[1] = 0xAB;
+    Cmd.SendBuffer[2] = 0x00;
+    Cmd.SendBuffer[3] = 0x03;
+    Cmd.SendBuffer[4] = 0x08;
+    Cmd.SendBuffer[5] = 0x05;
+    Cmd.SendBuffer[6] = 0x02;
+    Cmd.SendBuffer[7] = 0x07;
+    Cmd.SendBuffer[8] = 0xA8;
+    UartSendCommand(Cmd.SendBuffer, len + 1);
 }
 
 void CloseAutoReadCard(void)
 {
-	unsigned char len = 8;
-	
-	Cmd.SendBuffer[0] = 0x08;
-	Cmd.SendBuffer[1] = 0xAB;
-	Cmd.SendBuffer[2] = 0x01;
-	Cmd.SendBuffer[3] = 0x03;
-	Cmd.SendBuffer[4] = 0x08;
-	Cmd.SendBuffer[5] = 0x05;
-	Cmd.SendBuffer[6] = 0x02;
-	Cmd.SendBuffer[7] = 0x07;
-	Cmd.SendBuffer[8] = 0xA9;
-	UartSendCommand(Cmd.SendBuffer, len + 1);
+    unsigned char len = 8;
+
+    Cmd.SendBuffer[0] = 0x08;
+    Cmd.SendBuffer[1] = 0xAB;
+    Cmd.SendBuffer[2] = 0x01;
+    Cmd.SendBuffer[3] = 0x03;
+    Cmd.SendBuffer[4] = 0x08;
+    Cmd.SendBuffer[5] = 0x05;
+    Cmd.SendBuffer[6] = 0x02;
+    Cmd.SendBuffer[7] = 0x07;
+    Cmd.SendBuffer[8] = 0xA9;
+    UartSendCommand(Cmd.SendBuffer, len + 1);
 }
 
-/*******************************************************************************
-* º¯ÊıÃû         : OneKeyReadCard
-* ÃèÊö           : Ò»¼ü¶Á¿¨¡£
-* ÊäÈë           : ÎŞ
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : ÎŞ
-*******************************************************************************/
 void OneKeyReadCard(void)
 {
-	unsigned char len = 2;
-	
-	Cmd.SendBuffer[0] = len;
-	Cmd.SendBuffer[1] = 0x10;
-	Cmd.SendBuffer[2] = CheckSum(Cmd.SendBuffer, len);
-	UartSendCommand(Cmd.SendBuffer, len + 1);
+    unsigned char len = 2;
+
+    Cmd.SendBuffer[0] = len;
+    Cmd.SendBuffer[1] = 0x10;
+    Cmd.SendBuffer[2] = CheckSum(Cmd.SendBuffer, len);
+    UartSendCommand(Cmd.SendBuffer, len + 1);
 }
 
-/*******************************************************************************
-* º¯ÊıÃû         : OneKeyMakeCard
-* ÃèÊö           : Ò»¼ü°ì¿¨¡£
-* ÊäÈë           : block: ½«Òª²Ù×÷µÄ¿éµØÖ·¡£
-                   value: ½«Òª²Ù×÷µÄÖµ¡£
-                   keyA : °ì¿¨ÉèÖÃµÄÃÜÔ¿A¡£
-									 keyB : °ì¿¨ÉèÖÃµÄÃÜÔ¿B¡£
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : ÎŞ
-*******************************************************************************/
-void OneKeyMakeCard(unsigned char block, unsigned long value, unsigned char *keyA, unsigned char *keyB, unsigned char *keyBOld)
+void OneKeyMakeCard(unsigned char block, unsigned long value,
+                    unsigned char *keyA, unsigned char *keyB,
+                    unsigned char *keyBOld)
 {
-	unsigned char i, len = 25;
-	
-	Cmd.SendBuffer[0] = len;
-	Cmd.SendBuffer[1] = 0x11;
-	Cmd.SendBuffer[2] = block;
-	Cmd.SendBuffer[3] = (unsigned char)(value >> 24);
-	Cmd.SendBuffer[4] = (unsigned char)(value >> 16);
-	Cmd.SendBuffer[5] = (unsigned char)(value >> 8);
-	Cmd.SendBuffer[6] = (unsigned char)(value);
-	for(i = 0; i < 6; i ++)
-	{
-		Cmd.SendBuffer[7 + i] = keyA[i];
-	}
-	for(i = 0; i < 6; i ++)
-	{
-		Cmd.SendBuffer[13 + i] = keyB[i];
-	}
-	for(i = 0; i < 6; i ++)
-	{
-		Cmd.SendBuffer[19 + i] = keyBOld[i];
-	}
-	Cmd.SendBuffer[25] = CheckSum(Cmd.SendBuffer, len);
-	UartSendCommand(Cmd.SendBuffer, len + 1);
+    unsigned char i, len = 25;
+
+    Cmd.SendBuffer[0] = len;
+    Cmd.SendBuffer[1] = 0x11;
+    Cmd.SendBuffer[2] = block;
+    Cmd.SendBuffer[3] = (unsigned char)(value >> 24);
+    Cmd.SendBuffer[4] = (unsigned char)(value >> 16);
+    Cmd.SendBuffer[5] = (unsigned char)(value >> 8);
+    Cmd.SendBuffer[6] = (unsigned char)value;
+    for (i = 0; i < 6; i++)
+    {
+        Cmd.SendBuffer[7 + i] = keyA[i];
+        Cmd.SendBuffer[13 + i] = keyB[i];
+        Cmd.SendBuffer[19 + i] = keyBOld[i];
+    }
+    Cmd.SendBuffer[25] = CheckSum(Cmd.SendBuffer, len);
+    UartSendCommand(Cmd.SendBuffer, len + 1);
 }
 
-/*******************************************************************************
-* º¯ÊıÃû         : OneKeyInc
-* ÃèÊö           : Ò»¼ü³äÖµ¡£
-* ÊäÈë           : block: ½«Òª²Ù×÷µÄ¿éµØÖ·¡£
-                   key  : °ì¿¨ÉèÖÃµÄÃÜÔ¿¡£
-                   value: ½«Òª²Ù×÷µÄÖµ¡£
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : ÎŞ
-*******************************************************************************/
 void OneKeyInc(unsigned char block, unsigned char *key, unsigned long value)
 {
-	unsigned char i, len = 13;
-	
-	Cmd.SendBuffer[0] = len;
-	Cmd.SendBuffer[1] = 0x12;
-	Cmd.SendBuffer[2] = block;
-	for(i = 0; i < 6; i ++)
-	{
-		Cmd.SendBuffer[3 + i] = key[i];
-	}
-	Cmd.SendBuffer[9] = (unsigned char)(value >> 24);
-	Cmd.SendBuffer[10] = (unsigned char)(value >> 16);
-	Cmd.SendBuffer[11] = (unsigned char)(value >> 8);
-	Cmd.SendBuffer[12] = (unsigned char)(value);
-	Cmd.SendBuffer[13] = CheckSum(Cmd.SendBuffer, len);
-	UartSendCommand(Cmd.SendBuffer, len + 1);
+    unsigned char i, len = 13;
+
+    Cmd.SendBuffer[0] = len;
+    Cmd.SendBuffer[1] = 0x12;
+    Cmd.SendBuffer[2] = block;
+    for (i = 0; i < 6; i++)
+    {
+        Cmd.SendBuffer[3 + i] = key[i];
+    }
+    Cmd.SendBuffer[9] = (unsigned char)(value >> 24);
+    Cmd.SendBuffer[10] = (unsigned char)(value >> 16);
+    Cmd.SendBuffer[11] = (unsigned char)(value >> 8);
+    Cmd.SendBuffer[12] = (unsigned char)value;
+    Cmd.SendBuffer[13] = CheckSum(Cmd.SendBuffer, len);
+    UartSendCommand(Cmd.SendBuffer, len + 1);
 }
 
-/*******************************************************************************
-* º¯ÊıÃû         : OneKeyDec
-* ÃèÊö           : Ò»¼ü¿Û¿î¡£
-* ÊäÈë           : block: ½«Òª²Ù×÷µÄ¿éµØÖ·¡£
-                   key  : °ì¿¨ÉèÖÃµÄÃÜÔ¿¡£
-                   value: ½«Òª²Ù×÷µÄÖµ¡£
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : ÎŞ
-*******************************************************************************/
 void OneKeyDec(unsigned char block, unsigned char *key, unsigned long value)
 {
-	unsigned char i, len = 13;
-	
-	Cmd.SendBuffer[0] = len;
-	Cmd.SendBuffer[1] = 0x13;
-	Cmd.SendBuffer[2] = block;
-	for(i = 0; i < 6; i ++)
-	{
-		Cmd.SendBuffer[3 + i] = key[i];
-	}
-	Cmd.SendBuffer[9] = (unsigned char)(value >> 24);
-	Cmd.SendBuffer[10] = (unsigned char)(value >> 16);
-	Cmd.SendBuffer[11] = (unsigned char)(value >> 8);
-	Cmd.SendBuffer[12] = (unsigned char)(value);
-	Cmd.SendBuffer[13] = CheckSum(Cmd.SendBuffer, len);
-	UartSendCommand(Cmd.SendBuffer, len + 1);
+    unsigned char i, len = 13;
+
+    Cmd.SendBuffer[0] = len;
+    Cmd.SendBuffer[1] = 0x13;
+    Cmd.SendBuffer[2] = block;
+    for (i = 0; i < 6; i++)
+    {
+        Cmd.SendBuffer[3 + i] = key[i];
+    }
+    Cmd.SendBuffer[9] = (unsigned char)(value >> 24);
+    Cmd.SendBuffer[10] = (unsigned char)(value >> 16);
+    Cmd.SendBuffer[11] = (unsigned char)(value >> 8);
+    Cmd.SendBuffer[12] = (unsigned char)value;
+    Cmd.SendBuffer[13] = CheckSum(Cmd.SendBuffer, len);
+    UartSendCommand(Cmd.SendBuffer, len + 1);
 }
 
-/*******************************************************************************
-* º¯ÊıÃû         : OneKeyReadBlock
-* ÃèÊö           : Ò»¼ü¶Á¿é¡£
-* ÊäÈë           : block: ½«Òª²Ù×÷µÄ¿éµØÖ·¡£
-                   keyA : ÃÜÔ¿A¡£
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : ÎŞ
-*******************************************************************************/
 void OneKeyReadBlock(unsigned char block, unsigned char *keyA)
 {
-	unsigned char i, len = 9;
-	
-	Cmd.SendBuffer[0] = len;
-	Cmd.SendBuffer[1] = 0x14;
-	Cmd.SendBuffer[2] = block;
-	for(i = 0; i < 6; i ++)
-	{
-		Cmd.SendBuffer[3 + i] = keyA[i];
-	}
-	Cmd.SendBuffer[9] = CheckSum(Cmd.SendBuffer, len);
-	UartSendCommand(Cmd.SendBuffer, len + 1);
+    unsigned char i, len = 9;
+
+    Cmd.SendBuffer[0] = len;
+    Cmd.SendBuffer[1] = 0x14;
+    Cmd.SendBuffer[2] = block;
+    for (i = 0; i < 6; i++)
+    {
+        Cmd.SendBuffer[3 + i] = keyA[i];
+    }
+    Cmd.SendBuffer[9] = CheckSum(Cmd.SendBuffer, len);
+    UartSendCommand(Cmd.SendBuffer, len + 1);
 }
 
-/*******************************************************************************
-* º¯ÊıÃû         : OneKeyWriteBlock
-* ÃèÊö           : Ò»¼üĞ´¿é¡£
-* ÊäÈë           : block: ½«Òª²Ù×÷µÄ¿éµØÖ·¡£
-                   keyB : ÃÜÔ¿B¡£
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : ÎŞ
-*******************************************************************************/
-void OneKeyWriteBlock(unsigned char block, unsigned char *keyB, unsigned char *blockData)
+void OneKeyWriteBlock(unsigned char block, unsigned char *keyB,
+                      unsigned char *blockData)
 {
-	unsigned char i, len = 25;
-	
-	Cmd.SendBuffer[0] = len;
-	Cmd.SendBuffer[1] = 0x15;
-	Cmd.SendBuffer[2] = block;
-	for(i = 0; i < 6; i ++)
-	{
-		Cmd.SendBuffer[3 + i] = keyB[i];
-	}
-	for(i = 0; i < 16; i ++)
-	{
-		Cmd.SendBuffer[9 + i] = blockData[i];
-	}
-	Cmd.SendBuffer[25] = CheckSum(Cmd.SendBuffer, len);
-	UartSendCommand(Cmd.SendBuffer, len + 1);
+    unsigned char i, len = 25;
+
+    Cmd.SendBuffer[0] = len;
+    Cmd.SendBuffer[1] = 0x15;
+    Cmd.SendBuffer[2] = block;
+    for (i = 0; i < 6; i++)
+    {
+        Cmd.SendBuffer[3 + i] = keyB[i];
+    }
+    for (i = 0; i < 16; i++)
+    {
+        Cmd.SendBuffer[9 + i] = blockData[i];
+    }
+    Cmd.SendBuffer[25] = CheckSum(Cmd.SendBuffer, len);
+    UartSendCommand(Cmd.SendBuffer, len + 1);
 }
-/*******************************************************************************
-* º¯ÊıÃû         : CommandProcess
-* ÃèÊö           : ÃüÁî´¦Àí¡£
-* ÊäÈë           : ÎŞ
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : Ö´ĞĞ½á¹û¡£
-                   -0   : ÕıÈ·¡£
-                   -0xFF: ÎŞ¿¨¡£
-                   -0xFE: ¿¨²Ù×÷´íÎó¡£
-                   -0xFD: Ã»ÓĞÊÕµ½ÃüÁî¡£
-                   -0xFC: Óà¶î²»×ã¡£
-                   -0xFB: Ğ£Ñé´íÎó¡£
-*******************************************************************************/
+
 unsigned char CommandProcess(void)
 {
-	unsigned char i, status, bTemp;
-	
-	//½ÓÊÕµ½ÃüÁî
-	bTemp = UartReceiveCommand();
-	if(bTemp == 1)
-	{
-		//Ğ£ÑéÃüÁî
-		if(Cmd.ReceiveBuffer[Cmd.ReceiveBuffer[0]] == CheckSum(Cmd.ReceiveBuffer, Cmd.ReceiveBuffer[0]))
-		{
-			//»ñÈ¡¿¨ºÅ£¬¾­¹ıUartReceiveCommnad´¦Àí¹ıºó£¬ÓĞÒÔÏÂ¹æÂÉ
-			//Cmd.ReceiveBuffer[0] 		-> ÃüÁî³¤¶È
-			//Cmd.ReceiveBuffer[1] 		-> ÃüÁîÂë
-			//Cmd.ReceiveBuffer[2] 		-> ×´Ì¬Âë
-			//Cmd.ReceiveBuffer[3~4] 	-> ¿¨ÀàĞÍ
-			//Cmd.ReceiveBuffer[5~8] 	-> ¿¨ºÅ
-			Card.UID = Cmd.ReceiveBuffer[8]; Card.UID <<= 8;
-			Card.UID |= Cmd.ReceiveBuffer[7]; Card.UID <<= 8;
-			Card.UID |= Cmd.ReceiveBuffer[6]; Card.UID <<= 8;
-			Card.UID |= Cmd.ReceiveBuffer[5];
-			Cmd.Code = Cmd.ReceiveBuffer[1];
-			switch(Cmd.Code)
-			{
-				//Ò»¼ü¶Á¿¨£¬ÕâÀï²»ÄÜÉ¾³ı
-				case 0x10: break;
-				//Ò»¼ü°ì¿¨£¬ÕâÀï²»ÄÜÉ¾³ı
-				case 0x11: break;
-				//Ò»¼ü³äÖµ
-				case 0x12: 
-					Card.Value = Cmd.ReceiveBuffer[9];
-					Card.Value <<= 8;
-					Card.Value |= Cmd.ReceiveBuffer[10];
-					Card.Value <<= 8;
-					Card.Value |= Cmd.ReceiveBuffer[11];
-					Card.Value <<= 8;
-					Card.Value |= Cmd.ReceiveBuffer[12];
-					break;
-				//Ò»¼ü¿Û¿î
-				case 0x13: 
-					Card.Value = Cmd.ReceiveBuffer[9];
-					Card.Value <<= 8;
-					Card.Value |= Cmd.ReceiveBuffer[10];
-					Card.Value <<= 8;
-					Card.Value |= Cmd.ReceiveBuffer[11];
-					Card.Value <<= 8;
-					Card.Value |= Cmd.ReceiveBuffer[12];
-					break;
-				//Ò»¼ü¶Á¿é, Cmd.ReceiveBuffer[9~24] -> Êı¾İ
-				case 0x14: 
-					for(i = 0; i < 1; i++){Card.BlockData[i] = Cmd.ReceiveBuffer[10 + i];}
-					break;
-				//Ò»¼üĞ´¿é£¬ÕâÀï²»ÄÜÉ¾³ı
-				case 0x15: break;
-				default: status = 0xFB; break;
-			}
-			status = Cmd.ReceiveBuffer[2];
-		}
-		else {status = 0xFB;}
-	}
-	else{status = 0xFD;}
-	return status;
+    unsigned char i, status, len;
+
+    if (UartReceiveCommand() == 0)
+    {
+        return 0xFD;
+    }
+
+    len = Cmd.ReceiveBuffer[0];
+    if ((len < 3) || (len >= CARD_CMD_BUF_SIZE))
+    {
+        return 0xFB;
+    }
+
+    if (Cmd.ReceiveBuffer[len] != CheckSum(Cmd.ReceiveBuffer, len))
+    {
+        return 0xFB;
+    }
+
+    Cmd.Code = Cmd.ReceiveBuffer[1];
+    status = Cmd.ReceiveBuffer[2];
+
+    /* çŠ¶æ€ã€å¡ç±»å‹ã€å¡å·åœ¨çŠ¶æ€é”™è¯¯æ—¶ä¹Ÿå¯èƒ½å­˜åœ¨ï¼Œå…ˆä¿å­˜å†åˆ¤æ–­ */
+    if (len >= 9)
+    {
+        Card.Type = ((unsigned int)Cmd.ReceiveBuffer[3] << 8) |
+                    Cmd.ReceiveBuffer[4];
+        Card.UID = Cmd.ReceiveBuffer[8];
+        Card.UID <<= 8;
+        Card.UID |= Cmd.ReceiveBuffer[7];
+        Card.UID <<= 8;
+        Card.UID |= Cmd.ReceiveBuffer[6];
+        Card.UID <<= 8;
+        Card.UID |= Cmd.ReceiveBuffer[5];
+    }
+
+    if (status != 0x00)
+    {
+        return status;
+    }
+
+    switch (Cmd.Code)
+    {
+    case 0x10:
+    case 0x11:
+    case 0x15:
+        break;
+
+    case 0x12:
+    case 0x13:
+        if (len >= 13)
+        {
+            Card.Value = Cmd.ReceiveBuffer[9];
+            Card.Value <<= 8;
+            Card.Value |= Cmd.ReceiveBuffer[10];
+            Card.Value <<= 8;
+            Card.Value |= Cmd.ReceiveBuffer[11];
+            Card.Value <<= 8;
+            Card.Value |= Cmd.ReceiveBuffer[12];
+        }
+        break;
+
+    case 0x14:
+        if (len >= 25)
+        {
+            for (i = 0; i < 16; i++)
+            {
+                Card.BlockData[i] = Cmd.ReceiveBuffer[9 + i];
+            }
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    return status;
 }
 
-/*******************************************************************************
-* º¯ÊıÃû         : CheckSum
-* ÃèÊö           : ÃüÁîĞ£Ñé¡£
-* ÊäÈë           : 	dat : ÒªĞ£ÑéµÄÊı×é¡£
-										num : Ğ£ÑéµÄ×Ö½ÚÊı¡£
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : Ğ£ÑéÖµ¡£
-*******************************************************************************/
-unsigned char CheckSum(unsigned char *dat, unsigned char num)
+static unsigned char CheckSum(unsigned char *dat, unsigned char num)
 {
-  unsigned char bTemp = 0, i;
-  
-  for(i = 0; i < num; i ++){bTemp ^= dat[i];}
-  return bTemp;
+    unsigned char sum = 0, i;
+
+    for (i = 0; i < num; i++)
+    {
+        sum ^= dat[i];
+    }
+    return sum;
 }
 
-/*******************************************************************************
-* º¯ÊıÃû         : UartSendCommand
-* ÃèÊö           : ´®¿Ú·¢ËÍÃüÁî
-* ÊäÈë           : 	buff : ·¢ËÍµÄÊı×é¡£
-										cnt  : ·¢ËÍµÄ³¤¶È
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : Ğ£ÑéÖµ¡£
-*******************************************************************************/
-void UartSendCommand(u8 *buff, u8 cnt)
+static void UartSendCommand(u8 *buff, u8 cnt)
 {
-  u8 i;
-	
-	//·¢ËÍÃüÁîÍ·
-	
-  USART_SendData(USART3, 0x7F);
-	while(USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
-  for(i = 0; i < cnt; i++)
-  {
-    USART_SendData(USART3, *(buff + i));
-		while(USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
-		//Êı¾İÖĞÓĞ7F£¬¾Í¶à·¢Ò»¸ö
-		if(*(buff + i) == 0x7F)
-		{
-			USART_SendData(USART3, 0x7F);
-			while(USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
-		}
-  }
+    u8 i;
+
+    USART_SendData(USART3, 0x7F);
+    while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
+
+    for (i = 0; i < cnt; i++)
+    {
+        USART_SendData(USART3, buff[i]);
+        while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
+
+        if (buff[i] == 0x7F)
+        {
+            USART_SendData(USART3, 0x7F);
+            while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
+        }
+    }
 }
-/*******************************************************************************
-* º¯ÊıÃû         : UartReceiveCommand
-* ÃèÊö           : ÃüÁî½ÓÊÕº¯Êı¡£
-* ÊäÈë           : ÎŞ
-* Êä³ö           : ÎŞ
-* ·µ»Ø           : ÎŞ
-*******************************************************************************/
-u8 UartReceiveCommand(void)
+
+static u8 UartReceiveCommand(void)
 {
-	unsigned char i, j;
-	
-	//ÓĞ¿ªÊ¼½ÓÊÕÃüÁîÁË
-	if(Cmd.ReceivePoint > 0)
-	{
-		//½ÓÊÕÍêÊ£ÏÂµÄÊı¾İ
-		delay_ms(100);
-		//È¥µôÃüÁîÍ·
-		Cmd.ReceiveBuffer[0] = Cmd.ReceiveBuffer[1];
-		//È¥µôÊı¾İÖĞ¶à³öµÄÒ»¸ö7F
-		for(i = 2, j = 1; i < Cmd.ReceivePoint; i++)
-		{
-			//ÏÈÅĞ¶ÏÒ»ÏÂÕâ¸öÎª7FÊ±£¬ÉÏÒ»¸öÒ²ÊÇ7FµÄ»°£¬¾ÍÊÇË«¸ö7F£¬¾Í¶ªÆú¡£
-			if(Cmd.ReceiveBuffer[i] == 0x7F && Cmd.ReceiveBuffer[i - 1] == 0x7F){continue;}
-			
-			Cmd.ReceiveBuffer[j++] = Cmd.ReceiveBuffer[i];
-		}
-		Cmd.ReceivePoint = 0;
-		return 1;
-	}
-	return 0;
+    unsigned char i, j, raw;
+
+    if (Cmd.ReceivePoint == 0)
+    {
+        return 0;
+    }
+
+    /* æ¨¡å—ä»æ”¶åˆ°é¦–å­—èŠ‚åˆ°å‘å®Œæœ€é•¿å¸§çº¦å‡ åæ¯«ç§’ï¼Œç­‰ 100ms ä¿è¯æ•´å¸§æ”¶å®Œ */
+    delay_ms(100);
+
+    USART_ITConfig(USART3, USART_IT_RXNE, DISABLE);
+    raw = Cmd.ReceivePoint;
+
+    if ((raw < 3) || (Cmd.ReceiveBuffer[0] != 0x7F))
+    {
+        Cmd.ReceivePoint = 0;
+        USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);
+        return 0;
+    }
+
+    /* å»æ‰å¸§å¤´ï¼Œå¾—åˆ°å‘½ä»¤å±‚ */
+    Cmd.ReceiveBuffer[0] = Cmd.ReceiveBuffer[1];
+    j = 1;
+    for (i = 2; i < raw; i++)
+    {
+        if ((Cmd.ReceiveBuffer[i] == 0x7F) &&
+            (Cmd.ReceiveBuffer[i - 1] == 0x7F))
+        {
+            continue;
+        }
+
+        if (j < CARD_CMD_BUF_SIZE)
+        {
+            Cmd.ReceiveBuffer[j++] = Cmd.ReceiveBuffer[i];
+        }
+    }
+
+    Cmd.ReceivePoint = 0;
+    USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);
+    return 1;
 }
-
-
-///******************* (C) COPYRIGHT 2017 ÓÅÁé¿Æ¼¼ *********END OF FILE********/
-

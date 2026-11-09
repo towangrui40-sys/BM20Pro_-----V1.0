@@ -30,6 +30,7 @@ void Init_Rtu_RegHoldingBuf(SysDataDef* dat,short *buf)
 #define START_TASK_PRIO      					14
 #define DC_LED_TASK_PRIO						12
 #define MONITOR_TASK_PRIO						11
+#define CARD_TASK_PRIO							10
 #define SENSOR_TASK_PRIO						9
 #define VFD_TASK_PRIO							8
 
@@ -42,6 +43,7 @@ void Init_Rtu_RegHoldingBuf(SysDataDef* dat,short *buf)
 
 #define START_STK_SIZE  				256
 #define MONITOR_STK_SIZE				1024
+#define CARD_STK_SIZE					256
 #define SENSOR_STK_SIZE					256
 #define VFD_STK_SIZE					512
 #define DC_LED_STK_SIZE  		    	64
@@ -53,6 +55,7 @@ void Init_Rtu_RegHoldingBuf(SysDataDef* dat,short *buf)
 
 OS_STK START_TASK_STK[START_STK_SIZE];
 OS_STK MONITOR_TASK_STK[MONITOR_STK_SIZE];
+OS_STK CARD_TASK_STK[CARD_STK_SIZE];
 OS_STK SENSOR_TASK_STK[SENSOR_STK_SIZE];
 OS_STK VFD_TASK_STK[VFD_STK_SIZE];
 OS_STK DC_LED_TASK_STK[DC_LED_STK_SIZE];
@@ -62,6 +65,7 @@ OS_STK COM_INTERFACE_TASK_STK[COM_INTERFACE_STK_SIZE];
 
 void start_task(void *pdata);
 void monitor_task(void *pdata);
+void card_task(void *pdata);
 void sensor_task(void *pdata);
 void vfd_task(void *pdata);
 void dc_led_task(void *pdata);	
@@ -96,6 +100,7 @@ void start_task(void *pdata)
  	OSTaskCreate(com_interface_task,(void *)0,(OS_STK*)&COM_INTERFACE_TASK_STK[COM_INTERFACE_STK_SIZE-1],COM_INTERFACE_TASK_PRIO);
 	OSTaskCreate(tank_lock_task,(void *)0,(OS_STK*)&TANK_LOCK_TASK_STK[TANK_LOCK_STK_SIZE-1],TANK_LOCK_TASK_PRIO);	
 	OSTaskCreate(monitor_task,(void *)0,(OS_STK*)&MONITOR_TASK_STK[MONITOR_STK_SIZE-1],MONITOR_TASK_PRIO);
+	OSTaskCreate(card_task,(void *)0,(OS_STK*)&CARD_TASK_STK[CARD_STK_SIZE-1],CARD_TASK_PRIO);
 	OSTaskCreate(sensor_task,(void *)0,(OS_STK*)&SENSOR_TASK_STK[SENSOR_STK_SIZE-1],SENSOR_TASK_PRIO);
 	OSTaskCreate(vfd_task,(void *)0,(OS_STK*)&VFD_TASK_STK[VFD_STK_SIZE-1],VFD_TASK_PRIO);
 	OSTaskCreate(dc_led_task,(void *)0,(OS_STK*)&DC_LED_TASK_STK[DC_LED_STK_SIZE-1],DC_LED_TASK_PRIO);
@@ -369,6 +374,29 @@ void monitor_task(void *pdata)
 			sys.ctrl->tank_lock = 1;
 
 		delay_ms(10);
+	}
+}
+
+/*
+ * YL0202 读卡任务
+ *   初始化 USART3（9600 8N1），开启自动读卡，
+ *   收到完整卡片响应后更新 Card 结构。
+ *
+ * 应用层使用：
+ *   if (Card.NewData) {
+ *       uid = Card.UID;
+ *       Card.NewData = 0;
+ *   }
+ */
+void card_task(void *pdata)
+{
+	delay_ms(500);
+	Card_Init();
+
+	while(1)
+	{
+		Card_Process();
+		delay_ms(20);
 	}
 }
 
