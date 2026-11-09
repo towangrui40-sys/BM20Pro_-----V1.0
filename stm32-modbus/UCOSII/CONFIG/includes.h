@@ -70,6 +70,8 @@ enum CTRL_RTU_ADDR
 	ADDR_LOCK_STATE,
 	ADDR_LOCATION_TEST,
 	ADDR_TANK_LOCK,
+	ADDR_MAT_FLG,
+	ADDR_TEST_RES,
 	
 	ADDR_HREG_TOTAL,
 	RTU_MEM_BASE= 0x1000,
@@ -96,6 +98,8 @@ typedef struct
 	short lock_state;     //0:解锁位 1:上锁位 2:运行位
 	short location_test;  //0:在中间 1:在1号位 2:在2号位
 	short tank_lock;      //0:下压到位 1:不在位置
+	short mat_flg;        //研磨罐材质测量启动标志：1=开始测量，0=停止测量
+	short test_res;       //材质测试结果：0=无效/未测，1/2/3=有效结果
 }CTRL_TypeDef;
 
 	

@@ -33,8 +33,14 @@ void Card_Init(void)
     uart3_init(9600);
     delay_ms(300);
 
-    /* 默认开启自动读卡，模块检测到卡后主动上报 */
-    OpenAutoReadCard();
+    /* 按块读取模式工作：关闭自动读卡，使用默认密钥 A = FF FF FF FF FF FF */
+    CloseAutoReadCard();
+    Card.KeyA[0] = 0xFF;
+    Card.KeyA[1] = 0xFF;
+    Card.KeyA[2] = 0xFF;
+    Card.KeyA[3] = 0xFF;
+    Card.KeyA[4] = 0xFF;
+    Card.KeyA[5] = 0xFF;
 }
 
 unsigned char Card_Process(void)

@@ -379,23 +379,70 @@ void monitor_task(void *pdata)
 
 /*
  * YL0202 读卡任务
- *   初始化 USART3（9600 8N1），开启自动读卡，
- *   收到完整卡片响应后更新 Card 结构。
+ *   1. mat_flg=1 时，用 KeyA（默认 FF FF FF FF FF FF）读 S50 卡块 0x08
+ *   2. 块数据第 1 字节为 1/2/3 时写入 test_res
+ *   3. mat_flg=0、无卡或块数据无效时 test_res=0
  *
- * 应用层使用：
- *   if (Card.NewData) {
- *       uid = Card.UID;
- *       Card.NewData = 0;
- *   }
+ * 采用“发一次、等回应”的方式，200ms 没回应会重新发起读块，
+ * 避免每 20ms 连续发命令把总线/模块冲掉。
  */
 void card_task(void *pdata)
 {
+	unsigned char status;
+	unsigned char wait_resp = 0;
+	unsigned char wait_ticks = 0;
+
 	delay_ms(500);
 	Card_Init();
 
 	while(1)
 	{
-		Card_Process();
+		if(sys.ctrl->mat_flg == 1)
+		{
+			if(wait_resp == 0)
+			{
+				OneKeyReadBlock(0x08, Card.KeyA);
+				wait_resp = 1;
+				wait_ticks = 0;
+			}
+			else if(++wait_ticks >= 10)
+			{
+				/* 200ms 没回应，允许下一轮重新发读块命令 */
+				wait_resp = 0;
+				wait_ticks = 0;
+			}
+		}
+		else
+		{
+			sys.ctrl->test_res = 0;
+			wait_resp = 0;
+			wait_ticks = 0;
+		}
+
+		status = Card_Process();
+		if(status != 0xFD)
+		{
+			wait_resp = 0;
+			wait_ticks = 0;
+		}
+
+		if(status == 0x00)
+		{
+			if((Card.BlockData[0] >= 1) && (Card.BlockData[0] <= 3))
+			{
+				sys.ctrl->test_res = Card.BlockData[0];
+			}
+			else
+			{
+				sys.ctrl->test_res = 0;
+			}
+		}
+		else if((status == 0xFF) || (status == 0xFE))
+		{
+			/* 无卡或错误/无卡 */
+			sys.ctrl->test_res = 0;
+		}
+
 		delay_ms(20);
 	}
 }
